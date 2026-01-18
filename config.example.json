@@ -1,0 +1,32 @@
+{
+  "ports": [
+    {
+      "type": "local",
+      "name": "USB Serial Port 1",
+      "device": "/dev/ttyUSB0",
+      "speed": 115200,
+      "description": "Main USB serial console"
+    },
+    {
+      "type": "local",
+      "name": "USB Serial Port 2",
+      "device": "/dev/ttyUSB1",
+      "speed": 9600,
+      "description": "Secondary USB port"
+    },
+    {
+      "type": "remote",
+      "name": "Terminal Server Port 1",
+      "host": "192.168.1.100",
+      "port": 2001,
+      "description": "Remote device via terminal server"
+    },
+    {
+      "type": "remote",
+      "name": "Terminal Server Port 2",
+      "host": "terminal-server.local",
+      "port": 2002,
+      "description": "Second remote connection"
+    }
+  ]
+}

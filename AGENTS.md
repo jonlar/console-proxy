@@ -1,17 +1,17 @@
-# Console/Serial Proxy Project
+# Console Proxy Project
 
 ## Project Overview
-This project implements a console/serial proxy for handling serial communication and console interactions.
+This project implements a console proxy for handling console communication and interactions.
 
 ## Initial Context
 - **Created:** January 18, 2026
-- **Purpose:** Build a proxy system for console/serial communications
+- **Purpose:** Build a proxy system for console communications
 - **Repository:** Initialized as git repository
 
 ## Project Goals
-- Implement serial port communication handling
+- Implement console port communication handling
 - Provide proxy functionality for console interactions
-- Enable transparent serial communication bridging
+- Enable transparent console communication bridging
 
 ## Development Setup
 - Git repository initialized

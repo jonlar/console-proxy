@@ -11,6 +11,10 @@ dist/
 # Dependencies
 node_modules/
 vendor/
+bun.lockb
+
+# Configuration
+config.json
 
 # IDE and editor files
 .vscode/

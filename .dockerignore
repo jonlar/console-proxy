@@ -1,0 +1,13 @@
+node_modules
+.git
+.gitignore
+*.md
+.env
+.vscode
+dist
+build
+coverage
+.DS_Store
+*.log
+packages/frontend/dist
+packages/backend/dist

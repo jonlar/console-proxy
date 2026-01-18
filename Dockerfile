@@ -1,0 +1,48 @@
+# Use Alpine-based Node.js image
+FROM node:20-alpine
+
+# Install Bun
+RUN apk add --no-cache curl unzip bash && \
+    curl -fsSL https://bun.sh/install | bash && \
+    ln -s /root/.bun/bin/bun /usr/local/bin/bun && \
+    apk del curl unzip
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json ./
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+
+# Install dependencies
+RUN cd packages/backend && bun install
+RUN cd packages/frontend && bun install
+
+# Copy source files
+COPY packages/backend ./packages/backend
+COPY packages/frontend ./packages/frontend
+
+# Build frontend
+RUN cd packages/frontend && bun run build
+
+# Create data directory for persistent storage
+RUN mkdir -p /data
+
+# Expose port 80
+EXPOSE 80
+
+# Set environment variables
+ENV PORT=80
+ENV CONFIG_PATH=/data/config.json
+ENV NODE_ENV=production
+
+# Create volume for persistent data
+VOLUME /data
+
+# Copy and use entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["bun", "run", "--cwd", "packages/backend", "src/index.ts"]
