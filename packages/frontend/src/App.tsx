@@ -77,6 +77,8 @@ function App() {
   const [editingPort, setEditingPort] = useState<Port | null>(null);
   const [portType, setPortType] = useState<PortType>("remote");
   const [activeGroup, setActiveGroup] = useState<string>("Default");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [tableFilter, setTableFilter] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<{
     portId: string;
     portName: string;
@@ -502,7 +504,26 @@ function App() {
       {data?.status === 200 && (
         <div className="data-section">
           <div className="section-header">
-            <h2>Ports</h2>
+            <div className="header-left">
+              <div className="view-toggle">
+                <button
+                  type="button"
+                  className={`view-btn ${viewMode === "table" ? "active" : ""}`}
+                  onClick={() => setViewMode("table")}
+                  title="Table view"
+                >
+                  ☰
+                </button>
+                <button
+                  type="button"
+                  className={`view-btn ${viewMode === "cards" ? "active" : ""}`}
+                  onClick={() => setViewMode("cards")}
+                  title="Card view"
+                >
+                  ▦
+                </button>
+              </div>
+            </div>
             {!showAddForm && (
               <button
                 type="button"
@@ -517,6 +538,117 @@ function App() {
 
           {data.body.ports.length === 0 ? (
             <p className="no-ports">No ports configured. Add a port to get started.</p>
+          ) : viewMode === "table" ? (
+            <>
+              <div className="table-controls">
+                <input
+                  type="text"
+                  className="table-filter"
+                  placeholder="Filter by name, group, or description..."
+                  value={tableFilter}
+                  onChange={(e) => setTableFilter(e.target.value)}
+                />
+              </div>
+              <div className="ports-table-container">
+                <table className="ports-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Group</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Session</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data.body.ports as Port[])
+                      .filter((port) => {
+                        if (!tableFilter) return true;
+                        const searchStr = tableFilter.toLowerCase();
+                        return (
+                          port.name.toLowerCase().includes(searchStr) ||
+                          (port.group || "").toLowerCase().includes(searchStr) ||
+                          (port.description || "").toLowerCase().includes(searchStr)
+                        );
+                      })
+                      .map((port) => (
+                        <tr key={port.id}>
+                          <td className="port-name-cell">{port.name}</td>
+                          <td className="port-group-cell">{port.group || "Default"}</td>
+                          <td className="port-description-cell" title={port.description}>
+                            {port.description && port.description.length > 50
+                              ? `${port.description.substring(0, 50)}...`
+                              : port.description || "-"}
+                          </td>
+                          <td className="port-status-cell">
+                            <div
+                              className={`connection-status ${port.connectionStatus || "disconnected"}`}
+                              title={
+                                port.connectionStatus === "error" && port.lastError
+                                  ? port.lastError
+                                  : undefined
+                              }
+                            >
+                              <span className="status-dot" />
+                              <span className="status-text">
+                                {port.connectionStatus === "connected" && "Connected"}
+                                {port.connectionStatus === "connecting" && "Connecting..."}
+                                {port.connectionStatus === "error" &&
+                                  (port.lastError ? translateError(port.lastError) : "Error")}
+                                {(port.connectionStatus === "disconnected" ||
+                                  !port.connectionStatus) &&
+                                  "Disconnected"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="port-session-cell">
+                            {terminalSessions.has(port.id) ? (
+                              <div className="session-info">
+                                🔒 {terminalSessions.get(port.id)?.userName || "In Use"}
+                              </div>
+                            ) : (
+                              <span className="session-free">Free</span>
+                            )}
+                          </td>
+                          <td className="port-actions-cell">
+                            <div className="table-actions">
+                              {port.connectionStatus === "connected" &&
+                                (terminalSessions.has(port.id) ? (
+                                  <button
+                                    type="button"
+                                    className="icon-btn takeover-btn"
+                                    onClick={() => handleTakeoverTerminal(port)}
+                                    title="Take over terminal session"
+                                  >
+                                    ⚡
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="icon-btn terminal-btn"
+                                    onClick={() => openTerminal(port)}
+                                    title="Open terminal"
+                                  >
+                                    💻
+                                  </button>
+                                ))}
+                              <button
+                                type="button"
+                                className="icon-btn edit-btn"
+                                onClick={() => handleEditPort(port as Port)}
+                                title="Edit port"
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <>
               {(() => {
