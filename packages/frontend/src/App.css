@@ -385,17 +385,17 @@ button:disabled {
   font-weight: 600;
 }
 .items {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-lg);
 }
 
 .item-card {
-  padding: var(--space-xl);
+  padding: var(--space-lg);
   background-color: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   border-left: 4px solid var(--color-info);
-  min-height: 180px;
+  min-height: 140px;
   display: flex;
   flex-direction: column;
 }
