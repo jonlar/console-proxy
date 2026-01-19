@@ -399,9 +399,28 @@ function App() {
           </h1>
           <p className="subtitle">Manage and monitor console port connections</p>
         </div>
-        <div className="status-indicator">
-          <span className={`status-dot ${wsConnected ? "connected" : "disconnected"}`} />
-          <span className="status-text">{wsConnected ? "Connected" : "Disconnected"}</span>
+        <div className="header-right">
+          {userName && (
+            <div className="user-indicator">
+              <span className="user-icon">👤</span>
+              <span className="user-name">{userName}</span>
+              <button
+                type="button"
+                className="user-edit-btn"
+                onClick={() => {
+                  setIdentityInput(userName);
+                  setShowIdentityModal(true);
+                }}
+                title="Edit username"
+              >
+                ✏️
+              </button>
+            </div>
+          )}
+          <div className="status-indicator">
+            <span className={`status-dot ${wsConnected ? "connected" : "disconnected"}`} />
+            <span className="status-text">{wsConnected ? "Connected" : "Disconnected"}</span>
+          </div>
         </div>
       </div>
 
@@ -904,8 +923,8 @@ function App() {
       {showIdentityModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>👤 Identify Yourself</h3>
-            <p>Please enter your name before accessing the terminal:</p>
+            <h3>👤 {userName ? "Edit Your Name" : "What's Your Name?"}</h3>
+            <p>{userName ? "Update your name:" : "Please enter your name to continue:"}</p>
             <input
               type="text"
               value={identityInput}
@@ -932,6 +951,21 @@ function App() {
               >
                 Cancel
               </button>
+              {userName && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserName(null);
+                    setCookie("userName", "");
+                    setShowIdentityModal(false);
+                    setIdentityInput("");
+                  }}
+                  className="btn-danger"
+                  style={{ marginLeft: 0, marginRight: "auto" }}
+                >
+                  Clear Name
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

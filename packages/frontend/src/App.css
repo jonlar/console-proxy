@@ -136,6 +136,50 @@ h1 {
   margin: 0;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.user-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background-color: var(--color-bg-primary);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+}
+
+.user-icon {
+  font-size: 1.1rem;
+}
+
+.user-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.user-edit-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.user-edit-btn:hover {
+  opacity: 1;
+  background-color: var(--color-bg-tertiary);
+  transform: scale(1.1);
+}
+
 .status-indicator {
   display: flex;
   align-items: center;
