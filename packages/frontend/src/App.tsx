@@ -54,7 +54,7 @@ function translateError(error: string): string {
   return "Connection error";
 }
 
-type PortType = "local" | "remote";
+type PortType = "remote";
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -62,10 +62,8 @@ type Port = {
   id: string;
   type: PortType;
   name: string;
-  device?: string;
-  speed?: number;
-  host?: string;
-  port?: number;
+  host: string;
+  port: number;
   group?: string;
   description?: string;
   connectionStatus?: ConnectionStatus;
@@ -77,7 +75,7 @@ function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPort, setEditingPort] = useState<Port | null>(null);
-  const [portType, setPortType] = useState<PortType>("local");
+  const [portType, setPortType] = useState<PortType>("remote");
   const [activeGroup, setActiveGroup] = useState<string>("Default");
   const [deleteConfirm, setDeleteConfirm] = useState<{
     portId: string;
@@ -286,24 +284,14 @@ function App() {
 
     try {
       const group = formData.get("group") as string;
-      const body =
-        portType === "local"
-          ? {
-              type: "local" as const,
-              name: formData.get("name") as string,
-              device: formData.get("device") as string,
-              speed: Number.parseInt(formData.get("speed") as string, 10),
-              group: group || undefined,
-              description: formData.get("description") as string,
-            }
-          : {
-              type: "remote" as const,
-              name: formData.get("name") as string,
-              host: formData.get("host") as string,
-              port: Number.parseInt(formData.get("port") as string, 10),
-              group: group || undefined,
-              description: formData.get("description") as string,
-            };
+      const body = {
+        type: "remote" as const,
+        name: formData.get("name") as string,
+        host: formData.get("host") as string,
+        port: Number.parseInt(formData.get("port") as string, 10),
+        group: group || undefined,
+        description: formData.get("description") as string,
+      };
 
       if (editingPort) {
         await updateMutation.mutateAsync({
@@ -316,7 +304,7 @@ function App() {
       }
 
       setShowAddForm(false);
-      setPortType("local");
+      setPortType("remote");
       e.currentTarget.reset();
     } catch (error) {
       console.error("Failed to save port:", error);
@@ -332,7 +320,7 @@ function App() {
   const handleCancelEdit = () => {
     setEditingPort(null);
     setShowAddForm(false);
-    setPortType("local");
+    setPortType("remote");
   };
 
   // Build hierarchical group structure
@@ -426,21 +414,6 @@ function App() {
           <h2>{editingPort ? "Edit Port" : "Add New Port"}</h2>
           <form onSubmit={handleAddPort} className="add-form">
             <div className="form-row">
-              <label htmlFor="portType">
-                Port Type:
-                <select
-                  id="portType"
-                  value={portType}
-                  onChange={(e) => setPortType(e.target.value as PortType)}
-                  disabled={!!editingPort}
-                >
-                  <option value="local">Local Serial</option>
-                  <option value="remote">Remote Telnet</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="form-row">
               <label htmlFor="name">
                 Name:
                 <input
@@ -453,63 +426,31 @@ function App() {
               </label>
             </div>
 
-            {portType === "local" ? (
-              <>
-                <div className="form-row">
-                  <label htmlFor="device">
-                    Device:
-                    <input
-                      type="text"
-                      id="device"
-                      name="device"
-                      placeholder="/dev/ttyUSB0"
-                      defaultValue={editingPort?.type === "local" ? editingPort.device : ""}
-                      required
-                    />
-                  </label>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="speed">
-                    Speed (baud):
-                    <input
-                      type="number"
-                      id="speed"
-                      name="speed"
-                      defaultValue={editingPort?.type === "local" ? editingPort.speed : 115200}
-                      required
-                    />
-                  </label>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="form-row">
-                  <label htmlFor="host">
-                    Host:
-                    <input
-                      type="text"
-                      id="host"
-                      name="host"
-                      placeholder="192.168.1.100"
-                      defaultValue={editingPort?.type === "remote" ? editingPort.host : ""}
-                      required
-                    />
-                  </label>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="port">
-                    Port:
-                    <input
-                      type="number"
-                      id="port"
-                      name="port"
-                      defaultValue={editingPort?.type === "remote" ? editingPort.port : 4001}
-                      required
-                    />
-                  </label>
-                </div>
-              </>
-            )}
+            <div className="form-row">
+              <label htmlFor="host">
+                Host:
+                <input
+                  type="text"
+                  id="host"
+                  name="host"
+                  placeholder="192.168.1.100"
+                  defaultValue={editingPort?.host}
+                  required
+                />
+              </label>
+            </div>
+            <div className="form-row">
+              <label htmlFor="port">
+                Port:
+                <input
+                  type="number"
+                  id="port"
+                  name="port"
+                  defaultValue={editingPort?.port || 4001}
+                  required
+                />
+              </label>
+            </div>
 
             <div className="form-row">
               <label htmlFor="group">
@@ -695,18 +636,12 @@ function App() {
                       <div className="card-actions">
                         <div className="port-connection-group">
                           <span className={`port-type ${port.type}`}>{port.type}</span>
-                          {port.type === "local" ? (
-                            <span className="port-connection">
-                              {port.device} @ {port.speed} baud
-                            </span>
-                          ) : (
-                            <span className="port-connection">
-                              {port.host}:{port.port}
-                            </span>
-                          )}
+                          <span className="port-connection">
+                            {port.host}:{port.port}
+                          </span>
                         </div>
                         <div className="action-buttons">
-                          {port.type === "remote" && port.connectionStatus === "connected" && (
+                          {port.connectionStatus === "connected" && (
                             <div className="terminal-buttons">
                               {terminalSessions.has(port.id) ? (
                                 <button
