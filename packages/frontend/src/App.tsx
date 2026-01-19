@@ -472,27 +472,42 @@ function App() {
             </div>
 
             <div className="form-actions">
-              <button
-                type="submit"
-                disabled={addMutation.isPending || updateMutation.isPending}
-                className="add-port-btn"
-              >
-                {addMutation.isPending || updateMutation.isPending ? (
-                  <>
-                    <span className="btn-icon">⏳</span>
-                    {editingPort ? "Updating..." : "Adding..."}
-                  </>
-                ) : (
-                  <>
-                    <span className="btn-icon">✓</span>
-                    Ok
-                  </>
-                )}
-              </button>
-              <button type="button" onClick={handleCancelEdit} className="cancel-btn">
-                <span className="btn-icon">✕</span>
-                Cancel
-              </button>
+              <div className="form-main-actions">
+                <button
+                  type="submit"
+                  disabled={addMutation.isPending || updateMutation.isPending}
+                  className="add-port-btn"
+                >
+                  {addMutation.isPending || updateMutation.isPending ? (
+                    <>
+                      <span className="btn-icon">⏳</span>
+                      {editingPort ? "Updating..." : "Adding..."}
+                    </>
+                  ) : (
+                    <>
+                      <span className="btn-icon">✓</span>
+                      Ok
+                    </>
+                  )}
+                </button>
+                <button type="button" onClick={handleCancelEdit} className="cancel-btn">
+                  <span className="btn-icon">✕</span>
+                  Cancel
+                </button>
+              </div>
+              {editingPort && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteConfirm({ portId: editingPort.id, portName: editingPort.name });
+                    setShowAddForm(false);
+                    setEditingPort(null);
+                  }}
+                  className="btn-danger"
+                >
+                  🗑️ Delete
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -771,47 +786,39 @@ function App() {
                           </span>
                         </div>
                         <div className="action-buttons">
-                          {port.connectionStatus === "connected" && (
-                            <div className="terminal-buttons">
-                              {terminalSessions.has(port.id) ? (
-                                <button
-                                  type="button"
-                                  className="icon-btn takeover-btn"
-                                  onClick={() => handleTakeoverTerminal(port)}
-                                  title="Take over terminal session"
-                                >
-                                  ⚡
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="icon-btn terminal-btn"
-                                  onClick={() => openTerminal(port)}
-                                  title="Open terminal"
-                                >
-                                  💻
-                                </button>
-                              )}
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            className="icon-btn edit-btn"
-                            onClick={() => handleEditPort(port as Port)}
-                            title="Edit port"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn delete-btn"
-                            onClick={() =>
-                              setDeleteConfirm({ portId: port.id, portName: port.name })
-                            }
-                            title="Delete port"
-                          >
-                            🗑️
-                          </button>
+                          <div className="left-actions">
+                            {port.connectionStatus === "connected" && (
+                              <div className="terminal-buttons">
+                                {terminalSessions.has(port.id) ? (
+                                  <button
+                                    type="button"
+                                    className="icon-btn takeover-btn"
+                                    onClick={() => handleTakeoverTerminal(port)}
+                                    title="Take over terminal session"
+                                  >
+                                    ⚡
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="icon-btn terminal-btn"
+                                    onClick={() => openTerminal(port)}
+                                    title="Open terminal"
+                                  >
+                                    💻
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              className="icon-btn edit-btn"
+                              onClick={() => handleEditPort(port as Port)}
+                              title="Edit port"
+                            >
+                              ✏️
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
