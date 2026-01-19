@@ -108,6 +108,20 @@ function App() {
   const [takeoverConfirm, setTakeoverConfirm] = useState<{
     port: Port;
   } | null>(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("darkMode");
+    return saved === "true";
+  });
+
+  // Apply dark mode class to body
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add("dark-mode");
+    } else {
+      document.body.classList.remove("dark-mode");
+    }
+    localStorage.setItem("darkMode", String(darkMode));
+  }, [darkMode]);
 
   const { data, isLoading, error } = client.getPorts.useQuery(
     ["ports", refreshKey],
@@ -416,6 +430,14 @@ function App() {
           <p className="subtitle">Manage and monitor console port connections</p>
         </div>
         <div className="header-right">
+          <button
+            type="button"
+            onClick={() => setDarkMode(!darkMode)}
+            className="theme-toggle"
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           {userName && (
             <div className="user-indicator">
               <span className="user-icon">👤</span>
