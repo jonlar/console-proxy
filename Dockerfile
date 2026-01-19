@@ -1,6 +1,10 @@
 # Use Alpine-based Node.js image
 FROM node:20-alpine
 
+# Build arguments for version information
+ARG GIT_TAG
+ARG GIT_COMMIT
+
 # Install Bun
 RUN apk add --no-cache curl unzip bash && \
     curl -fsSL https://bun.sh/install | bash && \
@@ -23,8 +27,11 @@ RUN cd packages/frontend && bun install
 COPY packages/backend ./packages/backend
 COPY packages/frontend ./packages/frontend
 
-# Build frontend
-RUN cd packages/frontend && bun run build
+# Build frontend with version info
+RUN cd packages/frontend && \
+    VITE_GIT_TAG="${GIT_TAG}" \
+    VITE_GIT_COMMIT="${GIT_COMMIT}" \
+    bun run build
 
 # Create data directory for persistent storage
 RUN mkdir -p /data

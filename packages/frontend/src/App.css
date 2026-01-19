@@ -119,6 +119,17 @@ body {
   animation: pulse 2s infinite;
 }
 
+.version-badge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-family: monospace;
+  border: 1px solid var(--color-border);
+}
+
 .subtitle {
   color: var(--color-text-secondary);
   margin: 0;
@@ -398,6 +409,20 @@ button:disabled {
   font-size: var(--font-size-sm);
   margin: 0;
 }
+
+.footer {
+  margin-top: var(--space-2xl);
+  padding: var(--space-xl) 0;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.copyright {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .tabs {
   display: flex;
   gap: 0.5rem;

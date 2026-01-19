@@ -398,6 +398,9 @@ function App() {
               <span className="title-icon">⚡</span>
               Console Proxy
             </h1>
+            <span className="version-badge" title={`Version: ${__APP_VERSION__}`}>
+              {__APP_VERSION__}
+            </span>
             <a
               href="https://github.com/jonlar/console-proxy"
               target="_blank"
@@ -999,6 +1002,12 @@ function App() {
           </div>
         </div>
       )}
+
+      <footer className="footer">
+        <p className="copyright">
+          © {new Date().getFullYear()} Jonas Larsson. Licensed under MIT.
+        </p>
+      </footer>
     </div>
   );
 }
