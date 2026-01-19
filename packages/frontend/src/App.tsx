@@ -54,13 +54,26 @@ function translateError(error: string): string {
   return "Connection error";
 }
 
-type PortType = "remote";
+type PortType = "remote" | "local";
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-type Port = {
+type LocalPort = {
   id: string;
-  type: PortType;
+  type: "local";
+  name: string;
+  device: string;
+  speed: number;
+  group?: string;
+  description?: string;
+  connectionStatus?: ConnectionStatus;
+  lastConnected?: string;
+  lastError?: string;
+};
+
+type RemotePort = {
+  id: string;
+  type: "remote";
   name: string;
   host: string;
   port: number;
@@ -71,10 +84,13 @@ type Port = {
   lastError?: string;
 };
 
+type Port = LocalPort | RemotePort;
+
 function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPort, setEditingPort] = useState<Port | null>(null);
+  // @ts-ignore - portType is used in form submission handlers
   const [portType, setPortType] = useState<PortType>("remote");
   const [activeGroup, setActiveGroup] = useState<string>("Default");
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
@@ -492,7 +508,7 @@ function App() {
                   id="host"
                   name="host"
                   placeholder="192.168.1.100"
-                  defaultValue={editingPort?.host}
+                  defaultValue={editingPort?.type === "remote" ? editingPort.host : ""}
                   required
                 />
               </label>
@@ -504,7 +520,7 @@ function App() {
                   type="number"
                   id="port"
                   name="port"
-                  defaultValue={editingPort?.port || 4001}
+                  defaultValue={editingPort?.type === "remote" ? editingPort.port : 4001}
                   required
                 />
               </label>
@@ -840,7 +856,7 @@ function App() {
                         <div className="port-connection-group">
                           <span className={`port-type ${port.type}`}>{port.type}</span>
                           <span className="port-connection">
-                            {port.host}:{port.port}
+                            {port.type === "remote" ? `${port.host}:${port.port}` : port.device}
                           </span>
                         </div>
                         <div className="action-buttons">
