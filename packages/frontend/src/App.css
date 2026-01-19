@@ -96,6 +96,12 @@ body {
   gap: var(--space-xs);
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
 .main-title {
   color: var(--color-text-primary);
   margin: 0;
@@ -178,6 +184,25 @@ h1 {
   opacity: 1;
   background-color: var(--color-bg-tertiary);
   transform: scale(1.1);
+}
+
+.github-link {
+  display: flex;
+  align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  background-color: transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: all 0.2s;
+  opacity: 0.7;
+}
+
+.github-link:hover {
+  opacity: 1;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  transform: scale(1.05);
 }
 
 .status-indicator {
