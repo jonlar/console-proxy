@@ -407,8 +407,6 @@ function App() {
         <div className={`notification ${notification.type}`}>{notification.message}</div>
       )}
 
-      {deleteMutation.isSuccess && <p className="success">Port deleted successfully!</p>}
-
       {showAddForm && (
         <div className="add-form-section">
           <h2>{editingPort ? "Edit Port" : "Add New Port"}</h2>
