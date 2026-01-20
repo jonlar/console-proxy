@@ -29,6 +29,7 @@ COPY packages/frontend ./packages/frontend
 
 # Build frontend with version info
 RUN cd packages/frontend && \
+    echo "Building with GIT_TAG=${GIT_TAG} and GIT_COMMIT=${GIT_COMMIT}" && \
     VITE_GIT_TAG="${GIT_TAG}" \
     VITE_GIT_COMMIT="${GIT_COMMIT}" \
     bun run build
