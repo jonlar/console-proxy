@@ -54,24 +54,11 @@ function translateError(error: string): string {
   return "Connection error";
 }
 
-type PortType = "remote" | "local";
+type PortType = "remote";
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-type LocalPort = {
-  id: string;
-  type: "local";
-  name: string;
-  device: string;
-  speed: number;
-  group?: string;
-  description?: string;
-  connectionStatus?: ConnectionStatus;
-  lastConnected?: string;
-  lastError?: string;
-};
-
-type RemotePort = {
+type Port = {
   id: string;
   type: "remote";
   name: string;
@@ -83,8 +70,6 @@ type RemotePort = {
   lastConnected?: string;
   lastError?: string;
 };
-
-type Port = LocalPort | RemotePort;
 
 function App() {
   const [refreshKey, setRefreshKey] = useState(0);

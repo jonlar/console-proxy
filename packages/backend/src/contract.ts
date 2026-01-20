@@ -3,16 +3,6 @@ import { z } from "zod";
 
 const c = initContract();
 
-const LocalPortSchema = z.object({
-  type: z.literal("local"),
-  id: z.string(),
-  name: z.string(),
-  device: z.string(),
-  speed: z.number(),
-  group: z.string().optional(),
-  description: z.string().optional(),
-});
-
 const RemotePortSchema = z.object({
   type: z.literal("remote"),
   id: z.string(),
@@ -23,16 +13,7 @@ const RemotePortSchema = z.object({
   description: z.string().optional(),
 });
 
-const PortSchema = z.discriminatedUnion("type", [LocalPortSchema, RemotePortSchema]);
-
-const AddLocalPortSchema = z.object({
-  type: z.literal("local"),
-  name: z.string(),
-  device: z.string(),
-  speed: z.number(),
-  group: z.string().optional(),
-  description: z.string().optional(),
-});
+const PortSchema = RemotePortSchema;
 
 const AddRemotePortSchema = z.object({
   type: z.literal("remote"),
@@ -43,7 +24,7 @@ const AddRemotePortSchema = z.object({
   description: z.string().optional(),
 });
 
-const AddPortSchema = z.discriminatedUnion("type", [AddLocalPortSchema, AddRemotePortSchema]);
+const AddPortSchema = AddRemotePortSchema;
 
 export const contract = c.router({
   getPorts: {
