@@ -56,6 +56,24 @@ wss.on("connection", (ws) => {
   const clientId = generateClientId();
   (ws as ExtendedWebSocket).clientId = clientId;
 
+  // Send initial state of all active terminal sessions to the new client
+  for (const [portId, session] of activeTerminals.entries()) {
+    ws.send(
+      JSON.stringify({
+        type: "terminal_status_changed",
+        data: {
+          portId,
+          activeSession: {
+            clientId: session.clientId,
+            timestamp: session.timestamp,
+            userAgent: session.userAgent,
+            userName: session.userName,
+          },
+        },
+      }),
+    );
+  }
+
   // Handle terminal messages
   ws.on("message", (data: Buffer) => {
     try {
