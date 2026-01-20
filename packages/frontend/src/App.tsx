@@ -60,6 +60,7 @@ type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
 type Port = {
   id: string;
+  uuid: string;
   type: "remote";
   name: string;
   host: string;
@@ -792,56 +793,54 @@ function App() {
                           <div className="port-name-section">
                             <h3 className="port-name">{port.name}</h3>
                           </div>
-                          {port.type === "remote" && (
-                            <div className="port-indicators">
-                              <div
-                                className={`connection-status ${port.connectionStatus || "disconnected"}`}
-                                title={
-                                  port.connectionStatus === "error" && port.lastError
-                                    ? port.lastError
-                                    : undefined
-                                }
-                              >
-                                <span className="status-dot" />
-                                <span className="status-text">
-                                  {port.connectionStatus === "connected" && "Connected"}
-                                  {port.connectionStatus === "connecting" && "Connecting..."}
-                                  {port.connectionStatus === "error" &&
-                                    (port.lastError ? (
-                                      <span className="error-with-details">
-                                        {translateError(port.lastError)}
-                                      </span>
-                                    ) : (
-                                      "Connection error"
-                                    ))}
-                                  {(port.connectionStatus === "disconnected" ||
-                                    !port.connectionStatus) &&
-                                    "Disconnected"}
-                                </span>
-                              </div>
-                              {terminalSessions.has(port.id) ? (
-                                <div
-                                  className="terminal-indicator in-use"
-                                  title={formatSessionOwner(
-                                    terminalSessions.get(port.id) || {
-                                      clientId: "",
-                                      timestamp: Date.now(),
-                                    },
-                                  )}
-                                >
-                                  🔒 {terminalSessions.get(port.id)?.userName || "In Use"}
-                                </div>
-                              ) : null}
+                          <div className="port-indicators">
+                            <div
+                              className={`connection-status ${port.connectionStatus || "disconnected"}`}
+                              title={
+                                port.connectionStatus === "error" && port.lastError
+                                  ? port.lastError
+                                  : undefined
+                              }
+                            >
+                              <span className="status-dot" />
+                              <span className="status-text">
+                                {port.connectionStatus === "connected" && "Connected"}
+                                {port.connectionStatus === "connecting" && "Connecting..."}
+                                {port.connectionStatus === "error" &&
+                                  (port.lastError ? (
+                                    <span className="error-with-details">
+                                      {translateError(port.lastError)}
+                                    </span>
+                                  ) : (
+                                    "Connection error"
+                                  ))}
+                                {(port.connectionStatus === "disconnected" ||
+                                  !port.connectionStatus) &&
+                                  "Disconnected"}
+                              </span>
                             </div>
-                          )}
+                            {terminalSessions.has(port.id) ? (
+                              <div
+                                className="terminal-indicator in-use"
+                                title={formatSessionOwner(
+                                  terminalSessions.get(port.id) || {
+                                    clientId: "",
+                                    timestamp: Date.now(),
+                                  },
+                                )}
+                              >
+                                🔒 {terminalSessions.get(port.id)?.userName || "In Use"}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
-                        {port.description && <p className="port-description">{port.description}</p>}
                       </div>
+                      {port.description && <p className="port-description">{port.description}</p>}
                       <div className="card-actions">
                         <div className="port-connection-group">
                           <span className={`port-type ${port.type}`}>{port.type}</span>
                           <span className="port-connection">
-                            {port.type === "remote" ? `${port.host}:${port.port}` : port.device}
+                            {port.host}:{port.port}
                           </span>
                         </div>
                         <div className="action-buttons">

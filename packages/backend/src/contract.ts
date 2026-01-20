@@ -6,6 +6,7 @@ const c = initContract();
 const RemotePortSchema = z.object({
   type: z.literal("remote"),
   id: z.string(),
+  uuid: z.string(),
   name: z.string(),
   host: z.string(),
   port: z.number(),

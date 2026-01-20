@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const RemoteTelnetPortSchema = z.object({
   type: z.literal("remote"),
+  uuid: z.string(),
   name: z.string(),
   host: z.string(),
   port: z.number(),

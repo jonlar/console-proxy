@@ -267,7 +267,22 @@ try {
 
   // Initialize connections for existing remote ports
   const config = configLoader.getConfig();
-  config.ports.forEach((port, index) => {
+  let needsSave = false;
+
+  // Add UUIDs to ports that don't have them
+  for (const port of config.ports) {
+    if (!port.uuid) {
+      port.uuid = crypto.randomUUID();
+      needsSave = true;
+    }
+  }
+
+  if (needsSave) {
+    configLoader.save(config);
+    console.log("Added UUIDs to existing ports");
+  }
+
+  for (const [index, port] of config.ports.entries()) {
     if (port.type === "remote") {
       const portId = `port-${index}`;
       connectionManager.connect({
@@ -275,7 +290,7 @@ try {
         id: portId,
       });
     }
-  });
+  }
 } catch (error) {
   console.warn("Failed to load initial configuration, will use empty config");
 }
@@ -333,20 +348,24 @@ const router = s.router(contract, {
         };
       }
 
-      // Add new port
-      config.ports.push(body);
+      // Add new port with UUID
+      const newPortEntry = {
+        ...body,
+        uuid: crypto.randomUUID(),
+      };
+      config.ports.push(newPortEntry);
       configLoader.save(config);
 
       const newPortId = `port-${config.ports.length - 1}`;
       const newPort = {
-        ...body,
+        ...newPortEntry,
         id: newPortId,
       };
 
       // If it's a remote port, start connection
       if (body.type === "remote") {
         connectionManager.connect({
-          ...body,
+          ...newPortEntry,
           id: newPortId,
         });
       }
@@ -402,12 +421,17 @@ const router = s.router(contract, {
         };
       }
 
-      // Update port
-      config.ports[portIndex] = body;
+      // Update port, preserving the UUID
+      const existingUuid = config.ports[portIndex].uuid;
+      config.ports[portIndex] = {
+        ...body,
+        uuid: existingUuid,
+      };
       configLoader.save(config);
 
       const updatedPort = {
         ...body,
+        uuid: existingUuid,
         id: params.id,
       };
 
@@ -416,7 +440,7 @@ const router = s.router(contract, {
         // Restart connection with new settings
         connectionManager.disconnect(params.id);
         connectionManager.connect({
-          ...body,
+          ...config.ports[portIndex],
           id: params.id,
         });
       } else {
