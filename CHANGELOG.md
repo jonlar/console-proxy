@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Dropped local port schema support (planned feature that was never implemented)
 
+## [0.2.0] - $(date +%Y-%m-%d)
+
+$(cat changelog.txt | sed '1d')  # Remove first line "## What's Changed"
 ## [0.1.1] - 2026-01-20
 
 ### Fixed
