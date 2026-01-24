@@ -1,0 +1,150 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Get tag info
+        id: tag
+        run: |
+          echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${{ steps.tag.outputs.tag }}$" | head -n 1)
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, using initial commit"
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "Generating changelog from ${{ steps.prev_tag.outputs.prev_tag }} to ${{ steps.tag.outputs.tag }}"
+          
+          # Create changelog content
+          CHANGELOG=$(cat << 'EOF'
+          ## What's Changed
+          
+          EOF
+          )
+          
+          # Group commits by type
+          FEATURES=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ steps.tag.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges | grep "^- feat" || echo "")
+          FIXES=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ steps.tag.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges | grep "^- fix" || echo "")
+          CHORES=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ steps.tag.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges | grep "^- chore" || echo "")
+          REFACTORS=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ steps.tag.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges | grep "^- refactor" || echo "")
+          DOCS=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ steps.tag.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges | grep "^- docs" || echo "")
+          OTHER=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ steps.tag.outputs.tag }} --pretty=format:"- %s (%h)" --no-merges | grep -v "^- feat" | grep -v "^- fix" | grep -v "^- chore" | grep -v "^- refactor" | grep -v "^- docs" || echo "")
+          
+          # Build changelog with sections
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG+="### ✨ Features"$'\n'"$FEATURES"$'\n\n'
+          fi
+          
+          if [ -n "$FIXES" ]; then
+            CHANGELOG+="### 🐛 Bug Fixes"$'\n'"$FIXES"$'\n\n'
+          fi
+          
+          if [ -n "$REFACTORS" ]; then
+            CHANGELOG+="### ♻️ Refactoring"$'\n'"$REFACTORS"$'\n\n'
+          fi
+          
+          if [ -n "$CHORES" ]; then
+            CHANGELOG+="### 🔧 Maintenance"$'\n'"$CHORES"$'\n\n'
+          fi
+          
+          if [ -n "$DOCS" ]; then
+            CHANGELOG+="### 📝 Documentation"$'\n'"$DOCS"$'\n\n'
+          fi
+          
+          if [ -n "$OTHER" ]; then
+            CHANGELOG+="### Other Changes"$'\n'"$OTHER"$'\n\n'
+          fi
+          
+          # Add full changelog link
+          CHANGELOG+="**Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.prev_tag }}...${{ steps.tag.outputs.tag }}"
+          
+          # Output to file to preserve formatting
+          echo "$CHANGELOG" > changelog.txt
+          
+      - name: Update CHANGELOG.md
+        run: |
+          # Prepare the new release section
+          NEW_SECTION=$(cat << 'EOF'
+          ## [${{ steps.tag.outputs.version }}] - $(date +%Y-%m-%d)
+          
+          $(cat changelog.txt | sed '1d')  # Remove first line "## What's Changed"
+          
+          EOF
+          )
+          
+          # Read current changelog
+          if [ -f CHANGELOG.md ]; then
+            # Insert new section after "## [Unreleased]" section
+            awk -v new="$NEW_SECTION" '
+              /^## \[Unreleased\]/ {
+                print
+                in_unreleased=1
+                next
+              }
+              in_unreleased && /^## / {
+                print new
+                in_unreleased=0
+              }
+              {print}
+              END {
+                if (in_unreleased) print new
+              }
+            ' CHANGELOG.md > CHANGELOG.md.tmp
+            mv CHANGELOG.md.tmp CHANGELOG.md
+          else
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "$NEW_SECTION" >> CHANGELOG.md
+          fi
+      
+      - name: Commit updated CHANGELOG
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          if git diff --staged --quiet; then
+            echo "No changes to CHANGELOG.md"
+          else
+            git commit -m "chore(release): update CHANGELOG for ${{ steps.tag.outputs.tag }}"
+            git push origin HEAD:main
+          fi
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: changelog.txt
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
