@@ -50,8 +50,11 @@ export function TerminalComponent({
     terminalInstance.current = terminal;
     fitAddon.current = fit;
 
-    // Fit terminal to container
-    setTimeout(() => fit.fit(), 100);
+    // Fit terminal to container and focus
+    setTimeout(() => {
+      fit.fit();
+      terminal.focus();
+    }, 100);
 
     // Use shared WebSocket connection
     const handleWsMessage = (event: MessageEvent) => {
