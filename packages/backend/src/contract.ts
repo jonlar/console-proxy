@@ -134,4 +134,38 @@ export const contract = c.router({
     },
     summary: "Reload configuration from file",
   },
+  getLogs: {
+    method: "GET",
+    path: "/api/logs/:uuid",
+    pathParams: z.object({
+      uuid: z.string(),
+    }),
+    query: z.object({
+      date: z.string().optional(),
+      search: z.string().optional(),
+    }),
+    responses: {
+      200: z.object({
+        success: z.boolean(),
+        entries: z.array(
+          z.object({
+            timestamp: z.string(),
+            direction: z.enum(["in", "out"]),
+            data: z.string(),
+          }),
+        ),
+        availableDates: z.array(z.string()),
+        currentDate: z.string(),
+      }),
+      404: z.object({
+        success: z.boolean(),
+        message: z.string(),
+      }),
+      500: z.object({
+        success: z.boolean(),
+        message: z.string(),
+      }),
+    },
+    summary: "Get logs for a specific port",
+  },
 });

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { LogViewer } from "./LogViewer";
 import { TerminalComponent } from "./Terminal";
 import { client } from "./api";
 import "./App.css";
@@ -96,6 +97,10 @@ function App() {
     message: string;
   } | null>(null);
   const [activeTerminal, setActiveTerminal] = useState<string | null>(null);
+  const [logViewerPort, setLogViewerPort] = useState<{
+    uuid: string;
+    name: string;
+  } | null>(null);
   const [terminalSessions, setTerminalSessions] = useState<
     Map<
       string,
@@ -710,6 +715,16 @@ function App() {
                                 ))}
                               <button
                                 type="button"
+                                className="icon-btn log-btn"
+                                onClick={() =>
+                                  setLogViewerPort({ uuid: port.uuid, name: port.name })
+                                }
+                                title="View logs"
+                              >
+                                📋
+                              </button>
+                              <button
+                                type="button"
                                 className="icon-btn edit-btn"
                                 onClick={() => handleEditPort(port as Port)}
                                 title="Edit port"
@@ -870,6 +885,14 @@ function App() {
                             )}
                             <button
                               type="button"
+                              className="icon-btn log-btn"
+                              onClick={() => setLogViewerPort({ uuid: port.uuid, name: port.name })}
+                              title="View logs"
+                            >
+                              📋
+                            </button>
+                            <button
+                              type="button"
                               className="icon-btn edit-btn"
                               onClick={() => handleEditPort(port as Port)}
                               title="Edit port"
@@ -1024,6 +1047,14 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {logViewerPort && (
+        <LogViewer
+          uuid={logViewerPort.uuid}
+          portName={logViewerPort.name}
+          onClose={() => setLogViewerPort(null)}
+        />
       )}
 
       <footer className="footer">

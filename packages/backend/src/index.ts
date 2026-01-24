@@ -8,7 +8,14 @@ import { hideBin } from "yargs/helpers";
 import { ConfigLoader } from "./configLoader";
 import { TelnetConnectionManager } from "./connectionManager";
 import { contract } from "./contract";
-import { logTraffic, setLogDirectory, setMaxLogSize, flushBuffer } from "./logger";
+import {
+  flushBuffer,
+  getLogDates,
+  logTraffic,
+  readLogs,
+  setLogDirectory,
+  setMaxLogSize,
+} from "./logger";
 
 // Parse command line arguments
 const argv = yargs(hideBin(process.argv))
@@ -606,6 +613,51 @@ const router = s.router(contract, {
         body: {
           success: false,
           message: `Failed to reload configuration: ${message}`,
+        },
+      };
+    }
+  },
+  getLogs: async ({ params, query }) => {
+    try {
+      const { uuid } = params;
+      const { date, search } = query;
+
+      // Get available log dates
+      const availableDates = getLogDates(uuid);
+
+      if (availableDates.length === 0) {
+        return {
+          status: 404,
+          body: {
+            success: false,
+            message: `No logs found for UUID ${uuid}`,
+          },
+        };
+      }
+
+      // Use provided date or default to today
+      const today = new Date().toISOString().slice(0, 10);
+      const currentDate = date || (availableDates.includes(today) ? today : availableDates[0]);
+
+      // Read log entries
+      const entries = readLogs(uuid, currentDate, search);
+
+      return {
+        status: 200,
+        body: {
+          success: true,
+          entries,
+          availableDates,
+          currentDate,
+        },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return {
+        status: 500,
+        body: {
+          success: false,
+          message: `Failed to fetch logs: ${message}`,
         },
       };
     }

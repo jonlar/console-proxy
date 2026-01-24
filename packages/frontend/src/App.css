@@ -848,6 +848,10 @@ button:disabled {
   background-color: #e3f2fd;
 }
 
+.icon-btn.log-btn:hover {
+  background-color: #fff3e0;
+}
+
 .icon-btn.terminal-btn:hover {
   background-color: #e8f5e8;
 }

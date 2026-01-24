@@ -133,3 +133,126 @@ export function midnightRotate(uuid: string) {
   // Called at UTC midnight to start new file
   rotateLogs(uuid);
 }
+
+export interface LogEntry {
+  timestamp: string;
+  direction: "in" | "out";
+  data: string;
+}
+
+export function getLogDates(uuid: string): string[] {
+  try {
+    const dir = path.join(logRoot, uuid);
+    if (!fs.existsSync(dir)) {
+      return [];
+    }
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => f.replace(".json", ""))
+      .sort()
+      .reverse(); // Most recent first
+  } catch (error) {
+    console.error(`Failed to get log dates for ${uuid}:`, error);
+    return [];
+  }
+}
+
+export function readLogs(uuid: string, date: string, searchTerm?: string): LogEntry[] {
+  try {
+    // Handle date range (format: "2026-01-20,2026-01-24")
+    if (date.includes(",")) {
+      const [startDate, endDate] = date.split(",");
+      const availableDates = getLogDates(uuid);
+      const allEntries: LogEntry[] = [];
+
+      // Filter dates within range
+      const datesToRead = availableDates.filter((d) => d >= startDate && d <= endDate);
+
+      for (const dateStr of datesToRead) {
+        const logFile = path.join(logRoot, uuid, `${dateStr}.json`);
+        if (!fs.existsSync(logFile)) continue;
+
+        const content = fs.readFileSync(logFile, "utf-8");
+        const lines = content.trim().split("\n");
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const entry = JSON.parse(line) as LogEntry;
+            if (searchTerm && !entry.data.toLowerCase().includes(searchTerm.toLowerCase())) {
+              continue;
+            }
+            allEntries.push(entry);
+          } catch (parseError) {
+            console.error("Failed to parse log line:", parseError);
+          }
+        }
+      }
+
+      // Don't sort - let frontend handle sorting
+      return allEntries;
+    }
+
+    // Handle "week" mode - read last 7 days
+    if (date === "week") {
+      const availableDates = getLogDates(uuid);
+      const allEntries: LogEntry[] = [];
+
+      // Get up to 7 most recent dates
+      const datesToRead = availableDates.slice(0, 7);
+
+      for (const dateStr of datesToRead) {
+        const logFile = path.join(logRoot, uuid, `${dateStr}.json`);
+        if (!fs.existsSync(logFile)) continue;
+
+        const content = fs.readFileSync(logFile, "utf-8");
+        const lines = content.trim().split("\n");
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const entry = JSON.parse(line) as LogEntry;
+            if (searchTerm && !entry.data.toLowerCase().includes(searchTerm.toLowerCase())) {
+              continue;
+            }
+            allEntries.push(entry);
+          } catch (parseError) {
+            console.error("Failed to parse log line:", parseError);
+          }
+        }
+      }
+
+      return allEntries;
+    }
+
+    // Single day mode
+    const logFile = path.join(logRoot, uuid, `${date}.json`);
+    if (!fs.existsSync(logFile)) {
+      return [];
+    }
+
+    const content = fs.readFileSync(logFile, "utf-8");
+    const lines = content.trim().split("\n");
+    const entries: LogEntry[] = [];
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const entry = JSON.parse(line) as LogEntry;
+        // Filter by search term if provided
+        if (searchTerm && !entry.data.toLowerCase().includes(searchTerm.toLowerCase())) {
+          continue;
+        }
+        entries.push(entry);
+      } catch (parseError) {
+        console.error("Failed to parse log line:", parseError);
+      }
+    }
+
+    return entries;
+  } catch (error) {
+    console.error(`Failed to read logs for ${uuid} on ${date}:`, error);
+    return [];
+  }
+}
