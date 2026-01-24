@@ -1,5 +1,5 @@
 # Use Alpine-based Node.js image
-FROM node:20-alpine
+FROM node:24-alpine
 
 # Build arguments for version information
 ARG GIT_TAG
