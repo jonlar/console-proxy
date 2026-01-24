@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { createExpressEndpoints, initServer } from "@ts-rest/express";
 import express from "express";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, type WebSocket } from "ws";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { ConfigLoader } from "./configLoader";
