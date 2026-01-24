@@ -30,6 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Dropped local port schema support (planned feature that was never implemented)
 
+## [0.2.3] - 2026-01-24
+
+- fix(ci): fix YAML syntax error in release workflow (f2ff731)
+- fix(ci): fix CHANGELOG.md generation with proper variable expansion (9ed9d38)
+
+### 🔧 Maintenance
+- chore(release): update CHANGELOG for v0.2.2 (1a9bd40)
+
+**Full Changelog**: https://github.com/jonlar/console-proxy/compare/v0.2.2...v0.2.3
 ## [0.2.2] - 2026-01-24
 
 ### 🐛 Bug Fixes
