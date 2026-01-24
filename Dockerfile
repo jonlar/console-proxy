@@ -16,12 +16,12 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json ./
+COPY bun.lock ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
 
-# Install dependencies
-RUN cd packages/backend && bun install
-RUN cd packages/frontend && bun install
+# Install dependencies from root (workspaces)
+RUN bun install
 
 # Copy source files
 COPY packages/backend ./packages/backend
