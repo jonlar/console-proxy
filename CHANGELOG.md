@@ -7,28 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- UUID support for unique port identification - each port now has a stable UUID for tracking and logging
-- Traffic logging with configurable log directory and size
-  - Logs stored per port UUID in daily JSON files
-  - Line-by-line logging with proper line break detection
-  - Configurable via `--max-log-size` / `-m` argument (default: 1MB)
-  - Automatic buffer flushing on connection disconnect
-- Command-line arguments for server configuration
-  - `--port` / `-p`: Port to listen on (default: 3001 or PORT env var)
-  - `--data-dir` / `-d`: Directory for config and logs (default: "../../" or DATA_DIR env var)
-  - `--max-log-size` / `-m`: Maximum log size in MB per port (default: 1)
+## [0.2.3] - 2026-01-24
 
-### Changed
-- Upgraded Docker base image from node:20-alpine to node:24-alpine for security updates
-- Terminal now automatically receives focus when opened, allowing immediate input
-
-### Fixed
-- WebSocket type compatibility by importing WebSocket type from 'ws' library instead of DOM type
-- UUID preservation when updating ports - UUIDs now remain stable across configuration changes
-
-### Removed
-- Dropped local port schema support (planned feature that was never implemented)
+### 🐛 Bug Fixes
+- fix(ci): fix YAML syntax error in release workflow (f2ff731)
 
 ## [0.2.3] - 2026-01-24
 
