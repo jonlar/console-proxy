@@ -100,10 +100,12 @@ jobs:
           CHANGELOG_CONTENT=$(cat changelog.txt | sed '1d')
           
           # Prepare the new release section
-          NEW_SECTION="## [${{ steps.tag.outputs.version }}] - ${CURRENT_DATE}
-
-${CHANGELOG_CONTENT}
-"
+          cat > new_section.txt << EOF
+          ## [${{ steps.tag.outputs.version }}] - ${CURRENT_DATE}
+          
+          ${CHANGELOG_CONTENT}
+          EOF
+          NEW_SECTION=$(cat new_section.txt)
           
           # Read current changelog
           if [ -f CHANGELOG.md ]; then
