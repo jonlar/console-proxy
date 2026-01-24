@@ -8,4 +8,4 @@ if [ ! -f /data/config.json ]; then
 fi
 
 # Execute the main command
-exec "$@"
+exec bun run --cwd packages/backend src/index.ts "$@"
