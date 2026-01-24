@@ -93,14 +93,17 @@ jobs:
           
       - name: Update CHANGELOG.md
         run: |
+          # Get current date
+          CURRENT_DATE=$(date +%Y-%m-%d)
+          
+          # Get changelog content without the first line
+          CHANGELOG_CONTENT=$(cat changelog.txt | sed '1d')
+          
           # Prepare the new release section
-          NEW_SECTION=$(cat << 'EOF'
-          ## [${{ steps.tag.outputs.version }}] - $(date +%Y-%m-%d)
-          
-          $(cat changelog.txt | sed '1d')  # Remove first line "## What's Changed"
-          
-          EOF
-          )
+          NEW_SECTION="## [${{ steps.tag.outputs.version }}] - ${CURRENT_DATE}
+
+${CHANGELOG_CONTENT}
+"
           
           # Read current changelog
           if [ -f CHANGELOG.md ]; then

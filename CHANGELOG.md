@@ -30,15 +30,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Dropped local port schema support (planned feature that was never implemented)
 
-## [0.2.2] - $(date +%Y-%m-%d)
+## [0.2.2] - 2026-01-24
 
-$(cat changelog.txt | sed '1d')  # Remove first line "## What's Changed"
-## [0.2.1] - $(date +%Y-%m-%d)
+### 🐛 Bug Fixes
+- fix(config): make uuid field optional to allow auto-generation on load (5744da2)
 
-$(cat changelog.txt | sed '1d')  # Remove first line "## What's Changed"
-## [0.2.0] - $(date +%Y-%m-%d)
+## [0.2.1] - 2026-01-24
 
-$(cat changelog.txt | sed '1d')  # Remove first line "## What's Changed"
+### 🐛 Bug Fixes
+- fix(docker): move bun command into entrypoint script (c13bd57)
+- fix(docker): install dependencies from root using workspace configuration (c96ebd3)
+
+## [0.2.0] - 2026-01-24
+
+### ✨ Features
+- feat(logs): add interactive log viewer with live updates and filtering (c3feeef)
+
 ## [0.1.1] - 2026-01-20
 
 ### Fixed
