@@ -2,12 +2,13 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { createExpressEndpoints, initServer } from "@ts-rest/express";
 import express from "express";
-import { WebSocketServer, type WebSocket } from "ws";
+import { type WebSocket, WebSocketServer } from "ws";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { ConfigLoader } from "./configLoader";
 import { TelnetConnectionManager } from "./connectionManager";
 import { contract } from "./contract";
+import { logTraffic, setLogDirectory, setMaxLogSize, flushBuffer } from "./logger";
 
 // Parse command line arguments
 const argv = yargs(hideBin(process.argv))
@@ -21,7 +22,13 @@ const argv = yargs(hideBin(process.argv))
     alias: "d",
     type: "string",
     description: "Directory for config and logs",
-    default: process.env.DATA_DIR || "../../",
+    default: process.env.DATA_DIR || "../..//",
+  })
+  .option("max-log-size", {
+    alias: "m",
+    type: "number",
+    description: "Maximum log size in MB per port",
+    default: 1,
   })
   .help()
   .parseSync();
@@ -29,6 +36,11 @@ const argv = yargs(hideBin(process.argv))
 const app = express();
 const port = argv.port;
 const dataDir = argv["data-dir"];
+const maxLogSizeMB = argv["max-log-size"];
+
+// Set log directory and max size
+setLogDirectory(path.join(dataDir, "logs"));
+setMaxLogSize(maxLogSizeMB * 1024 * 1024); // Convert MB to bytes
 
 // Create HTTP server
 const server = createServer(app);
@@ -104,6 +116,13 @@ wss.on("connection", (ws) => {
         const success = connectionManager.sendData(message.portId, message.data);
         if (!success) {
           console.warn(`⚠ Failed to send data to port ${message.portId}`);
+        } else {
+          // Log traffic using UUID
+          const config = configLoader.getConfig();
+          const portIndex = Number.parseInt(message.portId.replace("port-", ""), 10);
+          if (!Number.isNaN(portIndex) && config.ports[portIndex]?.uuid) {
+            logTraffic(config.ports[portIndex].uuid, "out", message.data);
+          }
         }
       } else if (message.type === "get_status" && message.portId) {
         // Send current connection status for the port
@@ -278,7 +297,24 @@ connectionManager.on("statusChanged", (portId, connectionInfo) => {
 
 // Handle incoming data from telnet connections
 connectionManager.on("data", (portId, data) => {
+  // Log traffic using UUID
+  const config = configLoader.getConfig();
+  const portIndex = Number.parseInt(portId.replace("port-", ""), 10);
+  if (!Number.isNaN(portIndex) && config.ports[portIndex]?.uuid) {
+    logTraffic(config.ports[portIndex].uuid, "in", data.toString());
+  }
   broadcastUpdate("port_data", { portId, data: data.toString() });
+});
+
+// Handle connection disconnected - flush any remaining buffered data
+connectionManager.on("disconnected", (portId) => {
+  const config = configLoader.getConfig();
+  const portIndex = Number.parseInt(portId.replace("port-", ""), 10);
+  if (!Number.isNaN(portIndex) && config.ports[portIndex]?.uuid) {
+    const uuid = config.ports[portIndex].uuid;
+    flushBuffer(uuid, "in");
+    flushBuffer(uuid, "out");
+  }
 });
 
 // Load initial configuration

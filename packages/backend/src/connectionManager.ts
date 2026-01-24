@@ -76,6 +76,9 @@ export class TelnetConnectionManager extends EventEmitter {
       this.retryTimeouts.delete(portId);
     }
 
+    // Emit disconnected event before removing port config
+    this.emit("disconnected", portId);
+
     // Remove port configuration
     this.ports.delete(portId);
 
