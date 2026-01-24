@@ -5,10 +5,9 @@ services:
       - "80:80"
     environment:
       - NODE_ENV=production
-      - PORT=80
-      - CONFIG_PATH=/data/config.json
     volumes:
       - console-proxy-data:/data
+    command: ["--port", "80", "--data-dir", "/data"]
     restart: unless-stopped
     container_name: console-proxy
 

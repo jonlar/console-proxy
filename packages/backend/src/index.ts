@@ -3,12 +3,32 @@ import path from "node:path";
 import { createExpressEndpoints, initServer } from "@ts-rest/express";
 import express from "express";
 import { WebSocketServer } from "ws";
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
 import { ConfigLoader } from "./configLoader";
 import { TelnetConnectionManager } from "./connectionManager";
 import { contract } from "./contract";
 
+// Parse command line arguments
+const argv = yargs(hideBin(process.argv))
+  .option("port", {
+    alias: "p",
+    type: "number",
+    description: "Port to listen on",
+    default: process.env.PORT ? Number.parseInt(process.env.PORT) : 3001,
+  })
+  .option("data-dir", {
+    alias: "d",
+    type: "string",
+    description: "Directory for config and logs",
+    default: process.env.DATA_DIR || "../../",
+  })
+  .help()
+  .parseSync();
+
 const app = express();
-const port = process.env.PORT ? Number.parseInt(process.env.PORT) : 3001;
+const port = argv.port;
+const dataDir = argv["data-dir"];
 
 // Create HTTP server
 const server = createServer(app);
@@ -245,8 +265,8 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Use config.json at project root (two levels up from backend/src)
-const configLoader = new ConfigLoader(process.env.CONFIG_PATH || "../../config.json");
+// Use config.json in dataDir
+const configLoader = new ConfigLoader(`${dataDir}/config.json`);
 
 // Create telnet connection manager
 const connectionManager = new TelnetConnectionManager();
