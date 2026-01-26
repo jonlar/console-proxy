@@ -137,6 +137,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     setEntries([...entries].reverse());
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only run on mount
   useEffect(() => {
     // Load today by default
     const today = new Date();
@@ -148,7 +149,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
-  }, [fetchLogs]);
+  }, []);
 
   // Auto-filter when searchTerm changes (with debouncing)
   useEffect(() => {
