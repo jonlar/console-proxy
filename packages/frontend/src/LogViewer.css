@@ -198,9 +198,9 @@
 
 .range-btn {
   padding: 6px 12px;
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  border: 1px solid var(--border-color);
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -208,12 +208,22 @@
 }
 
 .range-btn:hover:not(:disabled) {
-  background: var(--color-bg-hover);
+  background: #e2e8f0;
 }
 
 .range-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.dark-mode .range-btn {
+  background: #334155;
+  color: #f1f5f9;
+  border-color: #475569;
+}
+
+.dark-mode .range-btn:hover:not(:disabled) {
+  background: #475569;
 }
 
 .date-picker-quick-buttons {
@@ -222,21 +232,34 @@
   padding: 10px;
   border-top: 1px solid #e0e0e0;
   justify-content: center;
+  background: #ffffff;
 }
 
 .date-picker-quick-buttons .range-btn {
   flex: 1;
   padding: 8px 16px;
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+.date-picker-quick-buttons .range-btn:hover:not(:disabled) {
+  background: #cbd5e1 !important;
 }
 
 .dark-mode .date-picker-quick-buttons {
   border-top-color: #475569;
+  background: #1e293b;
 }
 
-.dark-mode .range-btn {
-  background: #334155;
-  color: #f1f5f9;
-  border-color: #475569;
+.dark-mode .date-picker-quick-buttons .range-btn {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
+.dark-mode .date-picker-quick-buttons .range-btn:hover:not(:disabled) {
+  background: #475569 !important;
 }
 
 .dark-mode .range-btn:hover:not(:disabled) {
