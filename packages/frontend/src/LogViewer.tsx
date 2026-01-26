@@ -316,6 +316,21 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     }
   };
 
+  const stripAnsiCodes = (text: string) => {
+    // Remove ANSI escape sequences and control characters
+    return text
+      .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") // ANSI CSI sequences
+      .replace(/\x1b[()][AB012]/g, "") // Character set selection
+      .replace(/\x1b[=>]/g, "") // Keypad modes
+      .replace(/\x1b[78]/g, "") // Save/restore cursor
+      .replace(/\x9b[[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, "") // CSI sequences
+      .replace(/\x00/g, "") // NULL
+      .replace(/\x07/g, "") // BELL
+      .replace(/\x08/g, "") // Backspace
+      .replace(/\x7f/g, "") // DEL
+      .replace(/\r/g, ""); // Carriage return
+  };
+
   return (
     <div className="log-viewer-overlay">
       <div className="log-viewer-modal">
@@ -417,7 +432,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
                     </td>
                     <td className="log-time">{formatTimestamp(entry.timestamp)}</td>
                     <td className="log-data">
-                      <pre>{formatData(entry.data)}</pre>
+                      <pre>{stripAnsiCodes(formatData(entry.data))}</pre>
                     </td>
                   </tr>
                 ))}
