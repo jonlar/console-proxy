@@ -276,7 +276,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
                   <th className="log-direction">Dir</th>
                   <th className="log-time">
                     <button type="button" className="sortable" onClick={toggleSortOrder}>
-                      Time {sortDescending ? "↓" : "↑"}
+                      Time {sortDescending ? "↑" : "↓"}
                     </button>
                   </th>
                   <th className="log-data">Data</th>
