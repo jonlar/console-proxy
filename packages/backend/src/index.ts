@@ -14,6 +14,7 @@ import {
   logTraffic,
   readLogs,
   setLogDirectory,
+  setLogEntryCallback,
   setMaxLogSize,
 } from "./logger";
 
@@ -55,6 +56,29 @@ const server = createServer(app);
 // Create WebSocket server
 const wss = new WebSocketServer({ server, path: "/ws" });
 
+// Set up log entry callback to broadcast to subscribed clients
+setLogEntryCallback((uuid, entry) => {
+  const message = JSON.stringify({
+    type: "log_entry",
+    data: { uuid, entry },
+  });
+
+  let sentCount = 0;
+  for (const client of wss.clients) {
+    if (client.readyState === 1) {
+      const extClient = client as ExtendedWebSocket;
+      if (extClient.subscribedLogs?.has(uuid)) {
+        client.send(message);
+        sentCount++;
+      }
+    }
+  }
+
+  if (sentCount > 0) {
+    console.log(`📝 Sent log entry for ${uuid} to ${sentCount} subscribers`);
+  }
+});
+
 // Broadcast function to send updates to all connected clients
 function broadcastUpdate(type: string, data?: unknown) {
   const message = JSON.stringify({ type, data });
@@ -83,6 +107,7 @@ const activeTerminals = new Map<string, ActiveTerminalSession>(); // portId -> s
 // Extend WebSocket with custom properties
 interface ExtendedWebSocket extends WebSocket {
   clientId?: string;
+  subscribedLogs?: Set<string>; // UUIDs the client is subscribed to
 }
 
 // Generate unique client ID
@@ -93,7 +118,9 @@ function generateClientId(): string {
 wss.on("connection", (ws) => {
   console.log("WebSocket client connected");
   const clientId = generateClientId();
-  (ws as ExtendedWebSocket).clientId = clientId;
+  const extWs = ws as ExtendedWebSocket;
+  extWs.clientId = clientId;
+  extWs.subscribedLogs = new Set<string>();
 
   // Send initial state of all active terminal sessions to the new client
   for (const [portId, session] of activeTerminals.entries()) {
@@ -263,6 +290,23 @@ wss.on("connection", (ws) => {
         } else {
           console.log("   ⚠️ Session not owned by this client, not removing");
         }
+      } else if (message.type === "subscribe_logs" && message.uuid) {
+        // Subscribe to log updates for a specific UUID
+        console.log(`📝 Client ${clientId} subscribing to logs for UUID ${message.uuid}`);
+        const extWs = ws as ExtendedWebSocket;
+        extWs.subscribedLogs?.add(message.uuid);
+
+        ws.send(
+          JSON.stringify({
+            type: "log_subscription_confirmed",
+            data: { uuid: message.uuid },
+          }),
+        );
+      } else if (message.type === "unsubscribe_logs" && message.uuid) {
+        // Unsubscribe from log updates
+        console.log(`📝 Client ${clientId} unsubscribing from logs for UUID ${message.uuid}`);
+        const extWs = ws as ExtendedWebSocket;
+        extWs.subscribedLogs?.delete(message.uuid);
       }
     } catch (error) {
       console.error("Error handling WebSocket message:", error);

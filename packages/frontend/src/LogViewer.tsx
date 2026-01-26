@@ -26,9 +26,11 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
   const [sortDescending, setSortDescending] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const [isLiveMode, setIsLiveMode] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   const fetchLogs = useCallback(
     async (
@@ -175,16 +177,91 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     }
   }, [entries, searchTerm]);
 
-  // Auto-refresh logs every 2 seconds
+  // WebSocket connection for live updates
   useEffect(() => {
+    // Only connect if viewing today's logs
+    const today = new Date().toISOString().slice(0, 10);
+    const startStr = startDate?.toISOString().slice(0, 10);
+    const endStr = endDate?.toISOString().slice(0, 10);
+    const viewingToday = startStr === today && endStr === today;
+
+    if (!viewingToday || searchTerm) {
+      setIsLiveMode(false);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      return;
+    }
+
+    setIsLiveMode(true);
+
+    // Connect to WebSocket
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("📡 Connected to log updates");
+      // Subscribe to logs for this UUID
+      ws.send(JSON.stringify({ type: "subscribe_logs", uuid }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+
+        if (message.type === "log_entry" && message.data?.uuid === uuid) {
+          const entry = message.data.entry;
+          // Add new entry to the list
+          setEntries((prev) => {
+            // Check if we're in descending mode (newest first)
+            if (sortDescending) {
+              // Add to beginning
+              return [entry, ...prev];
+            }
+            // Add to end
+            return [...prev, entry];
+          });
+          setTotal((prev) => prev + 1);
+        }
+      } catch (error) {
+        console.error("Error handling log update:", error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("📡 Disconnected from log updates");
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "unsubscribe_logs", uuid }));
+      }
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [uuid, startDate, endDate, searchTerm, sortDescending]);
+
+  // Auto-refresh logs every 5 seconds when not in live mode
+  useEffect(() => {
+    if (isLiveMode) {
+      return; // Don't poll when using WebSocket
+    }
+
     const interval = setInterval(() => {
       if (startDate && endDate) {
         fetchLogs(startDate, endDate, searchTerm || undefined, true);
       }
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [startDate, endDate, searchTerm, fetchLogs]);
+  }, [startDate, endDate, searchTerm, fetchLogs, isLiveMode]);
 
   const handleDateChange = (dates: [Date | null, Date | null]) => {
     const [start, end] = dates;
@@ -361,6 +438,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
                 <span>
                   Showing {entries.length} of {total} entries
                 </span>
+                {isLiveMode && <span className="live-indicator">🔴 LIVE</span>}
                 {searchTerm && <span className="search-indicator">Filtered results</span>}
               </>
             )}

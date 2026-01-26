@@ -7,6 +7,17 @@ let maxSize = 1024 * 1024; // 1 MiB
 // Line buffers for each UUID and direction
 const lineBuffers = new Map<string, string>();
 
+// Callback for when new log entries are written
+type LogEntryCallback = (
+  uuid: string,
+  entry: { timestamp: string; direction: "in" | "out"; data: string },
+) => void;
+let logEntryCallback: LogEntryCallback | null = null;
+
+export function setLogEntryCallback(callback: LogEntryCallback | null) {
+  logEntryCallback = callback;
+}
+
 export function setLogDirectory(logDir: string) {
   logRoot = path.resolve(logDir);
 }
@@ -67,6 +78,11 @@ function writeLogEntry(uuid: string, direction: "in" | "out", data: string) {
     data: escapeData(data),
   };
   fs.appendFileSync(logFile, `${JSON.stringify(entry)}\n`);
+
+  // Notify callback if registered
+  if (logEntryCallback) {
+    logEntryCallback(uuid, entry);
+  }
 }
 
 export function logTraffic(uuid: string, direction: "in" | "out", data: string) {
