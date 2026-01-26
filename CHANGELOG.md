@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-01-26
+
+- feat(logs): strip ANSI escape codes and control characters from display (7be6223)
+- feat(logs): enhance scrollbar visibility in log viewer (18d0ac2)
+- feat(logs): add WebSocket support for real-time log updates (7567a20)
+- feat(logs): implement pagination for efficient loading of large log datasets (1c69c22)
+
+### 🐛 Bug Fixes
+- fix(logs): force scrollbar to always be visible (24a77ea)
+- fix(logs): prevent date reset when toggling sort order (4e79ddd)
+- fix(logs): add WebSocket proxy and cleanup debug logging (35b60db)
+- fix(logs): correct sort direction indicator arrows (5952883)
+- fix(logs): improve visibility of date range quick select buttons in light mode (770fd57)
+
+### 🔧 Maintenance
+- chore(release): update CHANGELOG for v0.2.3 (c402aca)
+
+### 📝 Documentation
+- docs: clean up CHANGELOG.md Unreleased section and add v0.2.3 entry (bcd89bf)
+
+**Full Changelog**: https://github.com/jonlar/console-proxy/compare/v0.2.3...v0.3.0
 ## [0.2.3] - 2026-01-24
 
 ### 🐛 Bug Fixes
