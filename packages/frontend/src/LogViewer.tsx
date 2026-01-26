@@ -24,11 +24,22 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortDescending, setSortDescending] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const logContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchLogs = useCallback(
-    async (start?: Date | null, end?: Date | null, search?: string, silent = false) => {
+    async (
+      start?: Date | null,
+      end?: Date | null,
+      search?: string,
+      silent = false,
+      limit = 1000,
+      offset = 0,
+      append = false,
+    ) => {
       if (!silent) {
         setLoading(true);
       }
@@ -53,6 +64,8 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
           `/api/logs/${uuid}?${new URLSearchParams({
             ...(dateParam && { date: dateParam }),
             ...(search && { search }),
+            limit: limit.toString(),
+            offset: offset.toString(),
           })}`,
         );
 
@@ -64,12 +77,22 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
               ? b.timestamp.localeCompare(a.timestamp)
               : a.timestamp.localeCompare(b.timestamp),
           );
-          setEntries(sorted);
+
+          if (append) {
+            setEntries((prev) => [...prev, ...sorted]);
+          } else {
+            setEntries(sorted);
+          }
+
           setAvailableDates(data.availableDates);
+          setHasMore(data.hasMore);
+          setTotal(data.total);
         } else if (response.status === 404) {
           setError("No logs found for this port");
           setEntries([]);
           setAvailableDates([]);
+          setHasMore(false);
+          setTotal(0);
         } else {
           setError("Failed to fetch logs");
         }
@@ -83,6 +106,28 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     },
     [uuid, sortDescending],
   );
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || loading) return;
+    fetchLogs(startDate, endDate, searchTerm || undefined, false, 1000, entries.length, true);
+  }, [hasMore, loading, fetchLogs, startDate, endDate, searchTerm, entries.length]);
+
+  // Handle scroll for infinite loading
+  useEffect(() => {
+    const container = logContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Load more when scrolled near bottom (within 200px)
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        loadMore();
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [loadMore]);
 
   const toggleSortOrder = () => {
     setSortDescending(!sortDescending);
@@ -269,7 +314,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
         )}
 
         {!loading && !error && entries.length > 0 && (
-          <div className="log-viewer-content">
+          <div className="log-viewer-content" ref={logContainerRef}>
             <table className="log-table">
               <thead>
                 <tr>
@@ -301,6 +346,11 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
                 ))}
               </tbody>
             </table>
+            {hasMore && (
+              <div className="log-loading-more">
+                {loading ? "Loading more..." : "Scroll for more"}
+              </div>
+            )}
           </div>
         )}
 
@@ -308,7 +358,9 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
           <div className="log-stats">
             {!loading && !error && (
               <>
-                <span>Total entries: {entries.length}</span>
+                <span>
+                  Showing {entries.length} of {total} entries
+                </span>
                 {searchTerm && <span className="search-indicator">Filtered results</span>}
               </>
             )}

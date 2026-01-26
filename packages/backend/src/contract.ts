@@ -143,6 +143,8 @@ export const contract = c.router({
     query: z.object({
       date: z.string().optional(),
       search: z.string().optional(),
+      limit: z.string().optional(),
+      offset: z.string().optional(),
     }),
     responses: {
       200: z.object({
@@ -156,6 +158,8 @@ export const contract = c.router({
         ),
         availableDates: z.array(z.string()),
         currentDate: z.string(),
+        total: z.number(),
+        hasMore: z.boolean(),
       }),
       404: z.object({
         success: z.boolean(),

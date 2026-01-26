@@ -620,7 +620,7 @@ const router = s.router(contract, {
   getLogs: async ({ params, query }) => {
     try {
       const { uuid } = params;
-      const { date, search } = query;
+      const { date, search, limit, offset } = query;
 
       // Get available log dates
       const availableDates = getLogDates(uuid);
@@ -639,16 +639,22 @@ const router = s.router(contract, {
       const today = new Date().toISOString().slice(0, 10);
       const currentDate = date || (availableDates.includes(today) ? today : availableDates[0]);
 
-      // Read log entries
-      const entries = readLogs(uuid, currentDate, search);
+      // Parse pagination parameters
+      const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
+      const parsedOffset = offset ? Number.parseInt(offset, 10) : undefined;
+
+      // Read log entries with pagination
+      const result = readLogs(uuid, currentDate, search, parsedLimit, parsedOffset);
 
       return {
         status: 200,
         body: {
           success: true,
-          entries,
+          entries: result.entries,
           availableDates,
           currentDate,
+          total: result.total,
+          hasMore: result.hasMore,
         },
       };
     } catch (error) {

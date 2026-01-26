@@ -442,15 +442,24 @@
 
 .log-loading,
 .log-error,
-.log-empty {
+.log-empty,
+.log-loading-more {
   padding: 40px;
   text-align: center;
   color: var(--text-secondary);
   font-size: 1rem;
 }
 
+.log-loading-more {
+  padding: 20px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
 .dark-mode .log-loading,
-.dark-mode .log-empty {
+.dark-mode .log-empty,
+.dark-mode .log-loading-more {
   color: #cbd5e1;
 }
 

@@ -158,7 +158,13 @@ export function getLogDates(uuid: string): string[] {
   }
 }
 
-export function readLogs(uuid: string, date: string, searchTerm?: string): LogEntry[] {
+export function readLogs(
+  uuid: string,
+  date: string,
+  searchTerm?: string,
+  limit?: number,
+  offset?: number,
+): { entries: LogEntry[]; total: number; hasMore: boolean } {
   try {
     // Handle date range (format: "2026-01-20,2026-01-24")
     if (date.includes(",")) {
@@ -190,8 +196,14 @@ export function readLogs(uuid: string, date: string, searchTerm?: string): LogEn
         }
       }
 
-      // Don't sort - let frontend handle sorting
-      return allEntries;
+      // Apply pagination
+      const total = allEntries.length;
+      const start = offset || 0;
+      const end = limit ? start + limit : allEntries.length;
+      const paginatedEntries = allEntries.slice(start, end);
+      const hasMore = end < total;
+
+      return { entries: paginatedEntries, total, hasMore };
     }
 
     // Handle "week" mode - read last 7 days
@@ -223,13 +235,20 @@ export function readLogs(uuid: string, date: string, searchTerm?: string): LogEn
         }
       }
 
-      return allEntries;
+      // Apply pagination
+      const total = allEntries.length;
+      const start = offset || 0;
+      const end = limit ? start + limit : allEntries.length;
+      const paginatedEntries = allEntries.slice(start, end);
+      const hasMore = end < total;
+
+      return { entries: paginatedEntries, total, hasMore };
     }
 
     // Single day mode
     const logFile = path.join(logRoot, uuid, `${date}.json`);
     if (!fs.existsSync(logFile)) {
-      return [];
+      return { entries: [], total: 0, hasMore: false };
     }
 
     const content = fs.readFileSync(logFile, "utf-8");
@@ -250,9 +269,16 @@ export function readLogs(uuid: string, date: string, searchTerm?: string): LogEn
       }
     }
 
-    return entries;
+    // Apply pagination
+    const total = entries.length;
+    const start = offset || 0;
+    const end = limit ? start + limit : entries.length;
+    const paginatedEntries = entries.slice(start, end);
+    const hasMore = end < total;
+
+    return { entries: paginatedEntries, total, hasMore };
   } catch (error) {
     console.error(`Failed to read logs for ${uuid} on ${date}:`, error);
-    return [];
+    return { entries: [], total: 0, hasMore: false };
   }
 }
