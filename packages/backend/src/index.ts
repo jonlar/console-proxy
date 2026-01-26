@@ -58,25 +58,32 @@ const wss = new WebSocketServer({ server, path: "/ws" });
 
 // Set up log entry callback to broadcast to subscribed clients
 setLogEntryCallback((uuid, entry) => {
+  console.log(`📢 Broadcasting log entry for UUID: ${uuid}`);
   const message = JSON.stringify({
     type: "log_entry",
     data: { uuid, entry },
   });
 
   let sentCount = 0;
+  let totalClients = 0;
   for (const client of wss.clients) {
+    totalClients++;
+    const extClient = client as ExtendedWebSocket;
     if (client.readyState === 1) {
-      const extClient = client as ExtendedWebSocket;
-      if (extClient.subscribedLogs?.has(uuid)) {
+      const subscribed = extClient.subscribedLogs?.has(uuid);
+      console.log(
+        `  Client ${extClient.clientId}: readyState: ${client.readyState}, subscribed to ${uuid}: ${subscribed}, all subscriptions: ${Array.from(extClient.subscribedLogs || []).join(", ")}`,
+      );
+      if (subscribed) {
         client.send(message);
         sentCount++;
       }
+    } else {
+      console.log(`  Client ${extClient.clientId}: readyState: ${client.readyState} (not open)`);
     }
   }
 
-  if (sentCount > 0) {
-    console.log(`📝 Sent log entry for ${uuid} to ${sentCount} subscribers`);
-  }
+  console.log(`📝 Sent log entry for ${uuid} to ${sentCount}/${totalClients} subscribers`);
 });
 
 // Broadcast function to send updates to all connected clients
@@ -295,6 +302,9 @@ wss.on("connection", (ws) => {
         console.log(`📝 Client ${clientId} subscribing to logs for UUID ${message.uuid}`);
         const extWs = ws as ExtendedWebSocket;
         extWs.subscribedLogs?.add(message.uuid);
+        console.log(
+          `   ✅ Subscribed! Client ${clientId} now has: ${Array.from(extWs.subscribedLogs || []).join(", ")}`,
+        );
 
         ws.send(
           JSON.stringify({
@@ -304,7 +314,6 @@ wss.on("connection", (ws) => {
         );
       } else if (message.type === "unsubscribe_logs" && message.uuid) {
         // Unsubscribe from log updates
-        console.log(`📝 Client ${clientId} unsubscribing from logs for UUID ${message.uuid}`);
         const extWs = ws as ExtendedWebSocket;
         extWs.subscribedLogs?.delete(message.uuid);
       }

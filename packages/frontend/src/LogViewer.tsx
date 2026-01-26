@@ -203,7 +203,6 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log("📡 Connected to log updates");
       // Subscribe to logs for this UUID
       ws.send(JSON.stringify({ type: "subscribe_logs", uuid }));
     };
@@ -236,7 +235,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     };
 
     ws.onclose = () => {
-      console.log("📡 Disconnected from log updates");
+      // WebSocket closed
     };
 
     return () => {
