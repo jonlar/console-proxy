@@ -288,7 +288,8 @@
 
 .log-viewer-content {
   flex: 1;
-  overflow: auto;
+  overflow-y: scroll;
+  overflow-x: auto;
   background: var(--background-color);
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 #f1f5f9;
