@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-02-10
+
+- fix(websocket): add ping/pong keepalive to prevent 60s timeout (b4043d6)
+
+### 🔧 Maintenance
+- chore(release): update CHANGELOG for v0.3.0 (eb024a4)
+
+**Full Changelog**: https://github.com/jonlar/console-proxy/compare/v0.3.0...v0.3.1
 ## [0.3.0] - 2026-01-26
 
 - feat(logs): strip ANSI escape codes and control characters from display (7be6223)
