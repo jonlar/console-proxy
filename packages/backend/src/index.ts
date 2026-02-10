@@ -53,8 +53,32 @@ setMaxLogSize(maxLogSizeMB * 1024 * 1024); // Convert MB to bytes
 // Create HTTP server
 const server = createServer(app);
 
-// Create WebSocket server
-const wss = new WebSocketServer({ server, path: "/ws" });
+// Create WebSocket server with ping/pong for keepalive
+const wss = new WebSocketServer({
+  server,
+  path: "/ws",
+  clientTracking: true,
+  // Send ping every 30 seconds to keep connections alive
+  // Most proxies/browsers timeout after 60s of inactivity
+});
+
+// Set up ping interval to keep connections alive
+const pingInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    const extWs = ws as ExtendedWebSocket & { isAlive?: boolean };
+    if (extWs.isAlive === false) {
+      console.log(`⚠️ Terminating unresponsive WebSocket client ${extWs.clientId}`);
+      return extWs.terminate();
+    }
+
+    extWs.isAlive = false;
+    extWs.ping();
+  });
+}, 30000); // 30 seconds
+
+wss.on("close", () => {
+  clearInterval(pingInterval);
+});
 
 // Set up log entry callback to broadcast to subscribed clients
 setLogEntryCallback((uuid, entry) => {
@@ -115,6 +139,7 @@ const activeTerminals = new Map<string, ActiveTerminalSession>(); // portId -> s
 interface ExtendedWebSocket extends WebSocket {
   clientId?: string;
   subscribedLogs?: Set<string>; // UUIDs the client is subscribed to
+  isAlive?: boolean;
 }
 
 // Generate unique client ID
@@ -128,6 +153,12 @@ wss.on("connection", (ws) => {
   const extWs = ws as ExtendedWebSocket;
   extWs.clientId = clientId;
   extWs.subscribedLogs = new Set<string>();
+  extWs.isAlive = true;
+
+  // Handle pong responses to keep connection alive
+  ws.on("pong", () => {
+    extWs.isAlive = true;
+  });
 
   // Send initial state of all active terminal sessions to the new client
   for (const [portId, session] of activeTerminals.entries()) {

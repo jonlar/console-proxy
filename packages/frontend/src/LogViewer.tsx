@@ -208,6 +208,13 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
       ws.send(JSON.stringify({ type: "subscribe_logs", uuid }));
     };
 
+    // Send periodic heartbeat to keep connection alive
+    const heartbeatInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "ping" }));
+      }
+    }, 25000); // Send every 25 seconds
+
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -236,10 +243,11 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     };
 
     ws.onclose = () => {
-      // WebSocket closed
+      clearInterval(heartbeatInterval);
     };
 
     return () => {
+      clearInterval(heartbeatInterval);
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "unsubscribe_logs", uuid }));
       }
