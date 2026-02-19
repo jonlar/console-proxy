@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-19
+
+- feat(logs): add terminal emulation view with xterm.js (46eab7e)
+
+### 🐛 Bug Fixes
+- fix(ui): prevent hierarchical tab overflow on small screens (9ec7304)
+
+### 🔧 Maintenance
+- chore(release): update CHANGELOG for v0.3.1 (0999315)
+
+**Full Changelog**: https://github.com/jonlar/console-proxy/compare/v0.3.1...v0.4.0
 ## [0.3.1] - 2026-02-10
 
 - fix(websocket): add ping/pong keepalive to prevent 60s timeout (b4043d6)
