@@ -8,7 +8,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "friday"
       time: "09:00"
     open-pull-requests-limit: 5
     labels:
@@ -28,7 +28,7 @@ updates:
     directory: "/packages/backend"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "friday"
       time: "09:00"
     open-pull-requests-limit: 5
     labels:
@@ -46,7 +46,7 @@ updates:
     directory: "/packages/frontend"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "friday"
       time: "09:00"
     open-pull-requests-limit: 5
     labels:
@@ -64,7 +64,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "friday"
       time: "09:00"
     open-pull-requests-limit: 3
     labels:
@@ -79,7 +79,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "friday"
       time: "09:00"
     open-pull-requests-limit: 3
     labels:
