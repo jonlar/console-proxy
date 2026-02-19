@@ -303,7 +303,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     fetchLogs(start, end, searchTerm || undefined);
   };
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = useCallback((timestamp: string) => {
     // Show full ISO timestamp: YYYY-MM-DD HH:MM:SS.ms
     try {
       const [datePart, timePart] = timestamp.split("T");
@@ -320,16 +320,16 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
       // Fallback to original
     }
     return timestamp;
-  };
+  }, []);
 
-  const formatData = (data: string) => {
+  const formatData = useCallback((data: string) => {
     // Decode escaped characters
     try {
       return JSON.parse(`"${data}"`);
     } catch {
       return data;
     }
-  };
+  }, []);
 
   const stripAnsiCodes = (text: string) => {
     // Remove ANSI escape sequences and control characters
@@ -448,7 +448,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     if (terminalInstance.current) {
       terminalInstance.current.scrollToBottom();
     }
-  }, [entries, viewMode]);
+  }, [entries, viewMode, formatTimestamp, formatData]);
 
   return (
     <div className="log-viewer-overlay">

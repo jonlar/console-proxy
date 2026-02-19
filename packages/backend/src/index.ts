@@ -64,16 +64,17 @@ const wss = new WebSocketServer({
 
 // Set up ping interval to keep connections alive
 const pingInterval = setInterval(() => {
-  wss.clients.forEach((ws) => {
+  for (const ws of wss.clients) {
     const extWs = ws as ExtendedWebSocket & { isAlive?: boolean };
     if (extWs.isAlive === false) {
       console.log(`⚠️ Terminating unresponsive WebSocket client ${extWs.clientId}`);
-      return extWs.terminate();
+      extWs.terminate();
+      continue;
     }
 
     extWs.isAlive = false;
     extWs.ping();
-  });
+  }
 }, 30000); // 30 seconds
 
 wss.on("close", () => {
