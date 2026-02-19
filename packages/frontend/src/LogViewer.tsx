@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import "@xterm/xterm/css/xterm.css";
 import "./LogViewer.css";
 
 interface LogEntry {
@@ -27,10 +30,14 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
   const [isLiveMode, setIsLiveMode] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "terminal">("table");
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const terminalInstance = useRef<Terminal | null>(null);
+  const fitAddon = useRef<FitAddon | null>(null);
 
   const fetchLogs = useCallback(
     async (
@@ -339,6 +346,110 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
       .replace(/\r/g, ""); // Carriage return
   };
 
+  // Initialize terminal when in terminal view mode
+  useEffect(() => {
+    if (viewMode !== "terminal" || !terminalRef.current) {
+      // Cleanup terminal if switching away from terminal view
+      if (terminalInstance.current) {
+        terminalInstance.current.dispose();
+        terminalInstance.current = null;
+        fitAddon.current = null;
+      }
+      return;
+    }
+
+    // Create terminal instance
+    const terminal = new Terminal({
+      cursorBlink: false,
+      fontSize: 13,
+      fontFamily: 'Monaco, Menlo, "Ubuntu Mono", "Courier New", monospace',
+      convertEol: true,
+      disableStdin: true,
+      theme: {
+        background: "#0a0a0a",
+        foreground: "#e0e0e0",
+        cursor: "#ffffff",
+        cursorAccent: "#000000",
+        selectionBackground: "rgba(255,255,255,0.3)",
+      },
+      allowTransparency: false,
+      rows: 40,
+      cols: 120,
+    });
+
+    const fit = new FitAddon();
+    terminal.loadAddon(fit);
+    terminal.open(terminalRef.current);
+
+    terminalInstance.current = terminal;
+    fitAddon.current = fit;
+
+    // Fit terminal to container
+    setTimeout(() => {
+      fit.fit();
+    }, 100);
+
+    // Handle window resize
+    const handleResize = () => {
+      if (fitAddon.current) {
+        fitAddon.current.fit();
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      terminal.dispose();
+    };
+  }, [viewMode]);
+
+  // Render entries in terminal when they change
+  useEffect(() => {
+    if (viewMode !== "terminal" || !terminalInstance.current || entries.length === 0) {
+      return;
+    }
+
+    const terminal = terminalInstance.current;
+    terminal.clear();
+
+    // In terminal view, always show chronological order (oldest first)
+    // Sort by timestamp ascending, regardless of table view sort order
+    const orderedEntries = [...entries].sort((a, b) => 
+      a.timestamp.localeCompare(b.timestamp)
+    );
+
+    // Render each entry with timestamp and direction indicator
+    for (const entry of orderedEntries) {
+      // Extract just the time portion from the formatted timestamp
+      const fullTimestamp = formatTimestamp(entry.timestamp);
+      const timeOnly = fullTimestamp.split(" ")[1] || fullTimestamp; // Get time part after space
+      
+      const directionColor = entry.direction === "in" ? "\x1b[36m" : "\x1b[33m"; // Cyan for in, Yellow for out
+      const directionSymbol = entry.direction === "in" ? "◀" : "▶";
+      const reset = "\x1b[0m";
+
+      // Write timestamp and direction on same line
+      terminal.write(`${directionColor}${timeOnly} ${directionSymbol}${reset} `);
+
+      // Write the actual data with ANSI codes preserved
+      try {
+        const data = formatData(entry.data);
+        terminal.write(data);
+      } catch (e) {
+        terminal.write(entry.data);
+      }
+
+      // Ensure we're on a new line for the next entry
+      terminal.writeln("");
+    }
+
+    // Scroll to bottom to show latest entries
+    if (terminalInstance.current) {
+      terminalInstance.current.scrollToBottom();
+    }
+  }, [entries, viewMode]);
+
   return (
     <div className="log-viewer-overlay">
       <div className="log-viewer-modal">
@@ -401,6 +512,30 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
               </button>
             )}
           </div>
+
+          <div className="control-group view-mode-group">
+            <span className="label">View:</span>
+            <div className="view-mode-toggle">
+              <button
+                type="button"
+                className={`view-mode-btn ${viewMode === "table" ? "active" : ""}`}
+                onClick={() => setViewMode("table")}
+                disabled={loading}
+                title="Table view with timestamps"
+              >
+                📋 Table
+              </button>
+              <button
+                type="button"
+                className={`view-mode-btn ${viewMode === "terminal" ? "active" : ""}`}
+                onClick={() => setViewMode("terminal")}
+                disabled={loading}
+                title="Terminal view with ANSI colors"
+              >
+                💻 Terminal
+              </button>
+            </div>
+          </div>
         </div>
 
         {loading && <div className="log-loading">Loading logs...</div>}
@@ -413,7 +548,7 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
           </div>
         )}
 
-        {!loading && !error && entries.length > 0 && (
+        {!loading && !error && entries.length > 0 && viewMode === "table" && (
           <div className="log-viewer-content" ref={logContainerRef}>
             <table className="log-table">
               <thead>
@@ -446,6 +581,17 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
                 ))}
               </tbody>
             </table>
+            {hasMore && (
+              <div className="log-loading-more">
+                {loading ? "Loading more..." : "Scroll for more"}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!loading && !error && entries.length > 0 && viewMode === "terminal" && (
+          <div className="log-viewer-terminal-container">
+            <div ref={terminalRef} className="log-viewer-terminal" />
             {hasMore && (
               <div className="log-loading-more">
                 {loading ? "Loading more..." : "Scroll for more"}

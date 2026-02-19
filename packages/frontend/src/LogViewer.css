@@ -550,3 +550,116 @@
 .dark-mode .log-viewer-content::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
+/* View Mode Toggle */
+.view-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.dark-mode .view-mode-toggle {
+  background: #0f0f0f;
+  border-color: #334155;
+}
+
+.view-mode-btn {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  border-right: 1px solid var(--border-color);
+}
+
+.view-mode-btn:last-child {
+  border-right: none;
+}
+
+.view-mode-btn:hover:not(:disabled) {
+  background: var(--hover-color);
+}
+
+.view-mode-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.view-mode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dark-mode .view-mode-btn {
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
+.dark-mode .view-mode-btn:hover:not(:disabled) {
+  background: #334155;
+}
+
+.dark-mode .view-mode-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+/* Terminal View Container */
+.log-viewer-terminal-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  padding: 10px;
+}
+
+.log-viewer-terminal {
+  flex: 1;
+  overflow: auto;
+}
+
+.log-viewer-terminal .xterm {
+  height: 100%;
+  padding: 10px;
+}
+
+.log-viewer-terminal .xterm-viewport {
+  overflow-y: auto !important;
+}
+
+/* Firefox scrollbar for terminal container */
+.log-viewer-terminal-container {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1e293b;
+}
+
+/* Webkit scrollbar for terminal container */
+.log-viewer-terminal-container::-webkit-scrollbar {
+  width: 12px;
+}
+
+.log-viewer-terminal-container::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.log-viewer-terminal-container::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 6px;
+  border: 2px solid #1e293b;
+}
+
+.log-viewer-terminal-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
