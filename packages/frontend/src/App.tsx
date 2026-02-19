@@ -1058,7 +1058,7 @@ function App() {
       )}
 
       <footer className="footer">
-        <p className="copyright">© {new Date().getFullYear()} Jonas Larsson. Licensed under MIT.</p>
+        <p className="copyright">© {new Date().getFullYear()} Jonas Larsson</p>
       </footer>
     </div>
   );
