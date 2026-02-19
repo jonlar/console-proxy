@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import "./LogViewer.css";
 
@@ -415,16 +415,14 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
 
     // In terminal view, always show chronological order (oldest first)
     // Sort by timestamp ascending, regardless of table view sort order
-    const orderedEntries = [...entries].sort((a, b) => 
-      a.timestamp.localeCompare(b.timestamp)
-    );
+    const orderedEntries = [...entries].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
     // Render each entry with timestamp and direction indicator
     for (const entry of orderedEntries) {
       // Extract just the time portion from the formatted timestamp
       const fullTimestamp = formatTimestamp(entry.timestamp);
       const timeOnly = fullTimestamp.split(" ")[1] || fullTimestamp; // Get time part after space
-      
+
       const directionColor = entry.direction === "in" ? "\x1b[36m" : "\x1b[33m"; // Cyan for in, Yellow for out
       const directionSymbol = entry.direction === "in" ? "◀" : "▶";
       const reset = "\x1b[0m";
