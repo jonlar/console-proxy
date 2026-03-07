@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-07
+
+- fix(frontend): prevent card view 3-column overflow (38340c5)
+- fix(format): remove trailing whitespace (542aa8a)
+- fix(lint): replace forEach with for-of and add useCallback wrappers (23dc3ea)
+
+### ♻️ Refactoring
+- refactor(config): make UUID field required in port schema (4873601)
+
+### 🔧 Maintenance
+- chore(deps)(deps): bump docker/build-push-action from 6 to 7 (91dadf3)
+- chore(deps)(deps): bump docker/setup-buildx-action from 3 to 4 (0e63331)
+- chore(deps)(deps): bump docker/login-action from 3 to 4 (00a0df0)
+- chore(deps)(deps): bump actions/checkout from 4 to 6 (1ef838e)
+- chore(deps)(deps): bump softprops/action-gh-release from 1 to 2 (da19159)
+- chore(deps)(deps): bump docker/build-push-action from 5 to 6 (de948cd)
+- chore(deps)(deps): bump oven-sh/setup-bun from 1 to 2 (c94f300)
+- chore(deps)(deps): bump node from 24-alpine to 25-alpine (e69f98d)
+- chore(deps): change Dependabot schedule to Fridays (e988864)
+- chore: add Dependabot configuration for automated dependency updates (2572d3c)
+- chore(release): update CHANGELOG for v0.4.0 (df3e746)
+
+### Other Changes
+- style(footer): align copyright right and reduce visibility (82a19a7)
+
+**Full Changelog**: https://github.com/jonlar/console-proxy/compare/v0.4.0...v0.4.1
 ## [0.4.0] - 2026-02-19
 
 - feat(logs): add terminal emulation view with xterm.js (46eab7e)
