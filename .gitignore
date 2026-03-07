@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+*.local
+.env
+config.json
+logs/
+.vscode/
+packages/frontend/.vite/

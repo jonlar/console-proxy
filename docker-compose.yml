@@ -1,0 +1,15 @@
+services:
+  my-app:
+    build: .
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - my-app-data:/data
+    command: ["--port", "80", "--data-dir", "/data"]
+    restart: unless-stopped
+    container_name: my-app
+
+volumes:
+  my-app-data:
