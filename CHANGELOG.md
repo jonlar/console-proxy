@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-20
+
+- feat(frontend): terminal-style log viewer with real-time updates (46f3f55)
+- feat(frontend): open terminal in new browser tab (e616172)
+- feat(frontend): add WebSocket auto-reconnect every 10s (d70fe9c)
+
+### 🐛 Bug Fixes
+- fix(docker): switch to oven/bun:1-alpine to eliminate Node.js CVEs (9e1f678)
+- fix(frontend): eliminate port status flicker (1b71871)
+- fix(ui): prevent card overflow with long DNS names (12caa38)
+
+### 🔧 Maintenance
+- chore(deps)(deps): bump docker/metadata-action from 5 to 6 (35896df)
+- chore(release): update CHANGELOG for v0.4.1 (6d9711f)
+
+**Full Changelog**: https://github.com/jonlar/console-proxy/compare/v0.4.1...v0.5.0
 ## [0.4.1] - 2026-03-07
 
 - fix(frontend): prevent card view 3-column overflow (38340c5)
