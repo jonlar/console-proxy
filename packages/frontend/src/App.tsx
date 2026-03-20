@@ -89,6 +89,8 @@ function App() {
   const [confirmText, setConfirmText] = useState("");
   const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const wsReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wsUnmountedRef = useRef(false);
   const [userName, setUserName] = useState<string | null>(() => getCookie("userName"));
   const [showIdentityModal, setShowIdentityModal] = useState(false);
   const [identityInput, setIdentityInput] = useState("");
@@ -145,66 +147,64 @@ function App() {
 
   // WebSocket connection
   useEffect(() => {
-    const wsUrl = import.meta.env.PROD
-      ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`
-      : "ws://localhost:3001/ws";
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    wsUnmountedRef.current = false;
 
-    ws.onopen = () => {
-      console.log("WebSocket connected");
-      setWsConnected(true);
-    };
+    function connect() {
+      const wsUrl = import.meta.env.PROD
+        ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`
+        : "ws://localhost:3001/ws";
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (message.type === "ports_updated") {
-          console.log("Ports updated, refreshing...");
-          setRefreshKey((k) => k + 1);
-        } else if (message.type === "connection_status_changed") {
-          console.log("Connection status changed:", message.data);
-          setRefreshKey((k) => k + 1);
-        } else if (message.type === "terminal_status_changed") {
-          console.log("🔄 Terminal status changed:", message.data);
-          // Update terminal session status
-          setTerminalSessions((prev) => {
-            const newMap = new Map(prev);
-            if (message.data.activeSession) {
-              console.log(
-                "🔒 Setting session for port",
-                message.data.portId,
-                ":",
-                message.data.activeSession,
-              );
-              newMap.set(message.data.portId, message.data.activeSession);
-            } else {
-              console.log("🔓 Clearing session for port", message.data.portId);
-              newMap.delete(message.data.portId);
-            }
-            console.log("📊 New session map size:", newMap.size);
-            return newMap;
-          });
-        } else if (message.type === "port_data") {
-          console.log("Port data received:", message.data);
-          // Handle incoming port data if needed
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        setWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === "ports_updated") {
+            setRefreshKey((k) => k + 1);
+          } else if (message.type === "connection_status_changed") {
+            setRefreshKey((k) => k + 1);
+          } else if (message.type === "terminal_status_changed") {
+            setTerminalSessions((prev) => {
+              const newMap = new Map(prev);
+              if (message.data.activeSession) {
+                newMap.set(message.data.portId, message.data.activeSession);
+              } else {
+                newMap.delete(message.data.portId);
+              }
+              return newMap;
+            });
+          }
+        } catch (error) {
+          console.error("Failed to parse WebSocket message:", error);
         }
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
-      }
-    };
+      };
 
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
-      setWsConnected(false);
-    };
+      ws.onclose = () => {
+        console.log("WebSocket disconnected");
+        setWsConnected(false);
+        if (!wsUnmountedRef.current) {
+          wsReconnectTimerRef.current = setTimeout(connect, 10000);
+        }
+      };
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
+    }
+
+    connect();
 
     return () => {
-      ws.close();
+      wsUnmountedRef.current = true;
+      if (wsReconnectTimerRef.current !== null) {
+        clearTimeout(wsReconnectTimerRef.current);
+      }
+      wsRef.current?.close();
     };
   }, []);
 
