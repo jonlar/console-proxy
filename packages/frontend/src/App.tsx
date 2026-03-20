@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { LogViewer } from "./LogViewer";
 import { client } from "./api";
 import "./App.css";
 
@@ -97,10 +96,6 @@ function App() {
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     message: string;
-  } | null>(null);
-  const [logViewerPort, setLogViewerPort] = useState<{
-    uuid: string;
-    name: string;
   } | null>(null);
   const [terminalSessions, setTerminalSessions] = useState<
     Map<
@@ -727,7 +722,10 @@ function App() {
                                 type="button"
                                 className="icon-btn log-btn"
                                 onClick={() =>
-                                  setLogViewerPort({ uuid: port.uuid, name: port.name })
+                                  window.open(
+                                    `/logs?uuid=${encodeURIComponent(port.uuid)}&portName=${encodeURIComponent(port.name)}`,
+                                    "_blank",
+                                  )
                                 }
                                 title="View logs"
                               >
@@ -893,7 +891,12 @@ function App() {
                             <button
                               type="button"
                               className="icon-btn log-btn"
-                              onClick={() => setLogViewerPort({ uuid: port.uuid, name: port.name })}
+                              onClick={() =>
+                                window.open(
+                                  `/logs?uuid=${encodeURIComponent(port.uuid)}&portName=${encodeURIComponent(port.name)}`,
+                                  "_blank",
+                                )
+                              }
                               title="View logs"
                             >
                               📋
@@ -1054,14 +1057,6 @@ function App() {
             </div>
           </div>
         </div>
-      )}
-
-      {logViewerPort && (
-        <LogViewer
-          uuid={logViewerPort.uuid}
-          portName={logViewerPort.name}
-          onClose={() => setLogViewerPort(null)}
-        />
       )}
 
       <footer className="footer">

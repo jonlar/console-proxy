@@ -7,6 +7,10 @@ let maxSize = 1024 * 1024; // 1 MiB
 // Line buffers for each UUID and direction
 const lineBuffers = new Map<string, string>();
 
+// How many characters of each line buffer have already been live-broadcast.
+// Used to send only the delta when partial data grows over multiple chunks.
+const broadcastOffsets = new Map<string, number>();
+
 // Callback for when new log entries are written
 type LogEntryCallback = (
   uuid: string,
@@ -98,10 +102,35 @@ export function logTraffic(uuid: string, direction: "in" | "out", data: string) 
     const incompleteChunk = lines.pop() || "";
     lineBuffers.set(bufferKey, incompleteChunk);
 
-    // Log all complete lines
+    // Log all complete lines (file write + live broadcast)
     for (const line of lines) {
       if (line.length > 0) {
         writeLogEntry(uuid, direction, line);
+      }
+    }
+
+    // When complete lines were flushed, reset the broadcast offset — the old
+    // partial chunk is gone.
+    if (lines.length > 0) {
+      broadcastOffsets.set(bufferKey, 0);
+    }
+
+    // Immediately broadcast any new bytes of the incomplete chunk (live only,
+    // no file write — the file write happens in flushBuffer/writeLogEntry for
+    // complete lines).  This ensures data without trailing newlines (e.g.
+    // shell prompts) appears in the live log view right away.
+    // Only applies to "in" direction — "out" data arrives keystroke-by-keystroke
+    // so partial broadcasting would emit each character individually.
+    if (direction === "in" && incompleteChunk.length > 0 && logEntryCallback) {
+      const lastOffset = broadcastOffsets.get(bufferKey) ?? 0;
+      const delta = incompleteChunk.slice(lastOffset);
+      if (delta.length > 0) {
+        broadcastOffsets.set(bufferKey, incompleteChunk.length);
+        logEntryCallback(uuid, {
+          timestamp: getTimestamp(),
+          direction,
+          data: escapeData(delta),
+        });
       }
     }
   } catch (error) {
@@ -118,6 +147,7 @@ export function flushBuffer(uuid: string, direction: "in" | "out") {
     if (buffer && buffer.length > 0) {
       writeLogEntry(uuid, direction, buffer);
       lineBuffers.delete(bufferKey);
+      broadcastOffsets.delete(bufferKey);
     }
   } catch (error) {
     console.error(`Failed to flush buffer for ${uuid}:`, error);

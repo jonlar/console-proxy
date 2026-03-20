@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "@xterm/xterm/css/xterm.css";
 import "./LogViewer.css";
 
@@ -16,184 +14,117 @@ interface LogViewerProps {
   uuid: string;
   portName: string;
   onClose: () => void;
+  fullPage?: boolean;
 }
 
-export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
+const MAX_ENTRIES = 500;
+
+function formatEntryTimestamp(iso: string): string {
+  // "2026-03-20T14:35:22.123Z" → "2026-03-20 14:35:22"
+  try {
+    const [datePart, timePart] = iso.split("T");
+    if (datePart && timePart) {
+      return `${datePart} ${timePart.substring(0, 8)}`;
+    }
+  } catch {
+    // fall through
+  }
+  return iso;
+}
+
+export function LogViewer({ uuid, portName, onClose, fullPage = false }: LogViewerProps) {
+  const now = () => new Date();
+  const defaultFrom = () => {
+    const d = now();
+    d.setHours(d.getHours() - 12);
+    return d;
+  };
+
   const [entries, setEntries] = useState<LogEntry[]>([]);
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [fromDatetime, setFromDatetime] = useState<Date>(defaultFrom);
+  const [toDatetime, setToDatetime] = useState<Date>(now);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sortDescending, setSortDescending] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
-  const [total, setTotal] = useState(0);
   const [isLiveMode, setIsLiveMode] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "terminal">("table");
+  const [truncated, setTruncated] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const logContainerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
 
   const fetchLogs = useCallback(
-    async (
-      start?: Date | null,
-      end?: Date | null,
-      search?: string,
-      silent = false,
-      limit = 1000,
-      offset = 0,
-      append = false,
-    ) => {
-      if (!silent) {
-        setLoading(true);
-      }
+    async (from: Date, to: Date, search?: string, silent = false) => {
+      if (!silent) setLoading(true);
       setError(null);
       try {
-        let dateParam: string | undefined;
+        // Build date param — may span two calendar days
+        const fromDate = from.toISOString().slice(0, 10);
+        const toDate = to.toISOString().slice(0, 10);
+        const dateParam = fromDate === toDate ? fromDate : `${fromDate},${toDate}`;
 
-        if (start && end) {
-          // Date range: get all dates between start and end
-          const startStr = start.toISOString().slice(0, 10);
-          const endStr = end.toISOString().slice(0, 10);
-          if (startStr === endStr) {
-            dateParam = startStr;
-          } else {
-            dateParam = `${startStr},${endStr}`;
-          }
-        } else if (start) {
-          dateParam = start.toISOString().slice(0, 10);
-        }
+        const params = new URLSearchParams({ date: dateParam, limit: "1000" });
+        if (search) params.set("search", search);
 
-        const response = await fetch(
-          `/api/logs/${uuid}?${new URLSearchParams({
-            ...(dateParam && { date: dateParam }),
-            ...(search && { search }),
-            limit: limit.toString(),
-            offset: offset.toString(),
-          })}`,
-        );
+        const response = await fetch(`/api/logs/${uuid}?${params}`);
 
         if (response.ok) {
           const data = await response.json();
-          // Sort entries on frontend (descending by default - most recent first)
-          const sorted = [...data.entries].sort((a, b) =>
-            sortDescending
-              ? b.timestamp.localeCompare(a.timestamp)
-              : a.timestamp.localeCompare(b.timestamp),
-          );
+          const fromIso = from.toISOString();
+          const toIso = to.toISOString();
 
-          if (append) {
-            setEntries((prev) => [...prev, ...sorted]);
-          } else {
-            setEntries(sorted);
+          // Filter by exact datetime range, sort ascending (oldest first)
+          let filtered: LogEntry[] = (data.entries as LogEntry[])
+            .filter((e) => e.timestamp >= fromIso && e.timestamp <= toIso)
+            .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+          // Cap at last MAX_ENTRIES
+          const wasTruncated = filtered.length > MAX_ENTRIES;
+          if (wasTruncated) {
+            filtered = filtered.slice(filtered.length - MAX_ENTRIES);
           }
-
-          setAvailableDates(data.availableDates);
-          setHasMore(data.hasMore);
-          setTotal(data.total);
+          setTruncated(wasTruncated);
+          setEntries(filtered);
         } else if (response.status === 404) {
-          setError("No logs found for this port");
           setEntries([]);
-          setAvailableDates([]);
-          setHasMore(false);
-          setTotal(0);
+          setError(null);
         } else {
           setError("Failed to fetch logs");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
-        if (!silent) {
-          setLoading(false);
-        }
+        if (!silent) setLoading(false);
       }
     },
-    [uuid, sortDescending],
+    [uuid],
   );
 
-  const loadMore = useCallback(() => {
-    if (!hasMore || loading) return;
-    fetchLogs(startDate, endDate, searchTerm || undefined, false, 1000, entries.length, true);
-  }, [hasMore, loading, fetchLogs, startDate, endDate, searchTerm, entries.length]);
-
-  // Handle scroll for infinite loading
-  useEffect(() => {
-    const container = logContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      // Load more when scrolled near bottom (within 200px)
-      if (scrollHeight - scrollTop - clientHeight < 200) {
-        loadMore();
-      }
-    };
-
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [loadMore]);
-
-  const toggleSortOrder = () => {
-    setSortDescending(!sortDescending);
-    // Re-sort existing entries
-    setEntries([...entries].reverse());
-  };
-
+  // Load on mount
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only run on mount
   useEffect(() => {
-    // Load today by default
-    const today = new Date();
-    setStartDate(today);
-    setEndDate(today);
-    fetchLogs(today, today);
-
-    // Focus search input on mount
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
+    fetchLogs(fromDatetime, toDatetime);
+    if (searchInputRef.current) searchInputRef.current.focus();
   }, []);
 
-  // Auto-filter when searchTerm changes (with debouncing)
+  // Debounced search re-fetch
   useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      if (startDate && endDate) {
-        fetchLogs(startDate, endDate, searchTerm || undefined);
-      }
+      fetchLogs(fromDatetime, toDatetime, searchTerm || undefined);
     }, 300);
-
     return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [searchTerm, startDate, endDate, fetchLogs]);
+  }, [searchTerm, fromDatetime, toDatetime, fetchLogs]);
 
-  // Maintain focus on search input after filtering updates
-  // biome-ignore lint/correctness/useExhaustiveDependencies: We need entries to refocus after fetch completes
+  // WebSocket for live updates — disabled only when a search filter is active
   useEffect(() => {
-    if (searchInputRef.current && searchTerm) {
-      searchInputRef.current.focus();
-    }
-  }, [entries, searchTerm]);
+    const liveEligible = !searchTerm;
 
-  // WebSocket connection for live updates
-  useEffect(() => {
-    // Only connect if viewing today's logs
-    const today = new Date().toISOString().slice(0, 10);
-    const startStr = startDate?.toISOString().slice(0, 10);
-    const endStr = endDate?.toISOString().slice(0, 10);
-    const viewingToday = startStr === today && endStr === today;
-
-    if (!viewingToday || searchTerm) {
+    if (!liveEligible) {
       setIsLiveMode(false);
       if (wsRef.current) {
         wsRef.current.close();
@@ -204,51 +135,51 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
 
     setIsLiveMode(true);
 
-    // Connect to WebSocket
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // Subscribe to logs for this UUID
       ws.send(JSON.stringify({ type: "subscribe_logs", uuid }));
     };
 
-    // Send periodic heartbeat to keep connection alive
     const heartbeatInterval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "ping" }));
       }
-    }, 25000); // Send every 25 seconds
+    }, 25000);
 
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-
         if (message.type === "log_entry" && message.data?.uuid === uuid) {
-          const entry = message.data.entry;
-          // Add new entry to the list
-          setEntries((prev) => {
-            // Check if we're in descending mode (newest first)
-            if (sortDescending) {
-              // Add to beginning
-              return [entry, ...prev];
-            }
-            // Add to end
-            return [...prev, entry];
-          });
-          setTotal((prev) => prev + 1);
+          const entry: LogEntry = message.data.entry;
+          // Write live entry directly to terminal — avoids the clear+rewrite
+          // cycle that the entries-state effect uses, preventing a race where
+          // two rapid entries (out then in) cause the second clear to wipe both.
+          const terminal = terminalInstance.current;
+          if (!terminal) return;
+          const ts = formatEntryTimestamp(entry.timestamp);
+          const dirColor = entry.direction === "in" ? "\x1b[36m" : "\x1b[33m";
+          const dirSymbol = entry.direction === "in" ? "◀" : "▶";
+          const reset = "\x1b[0m";
+          terminal.write(`${dirColor}${ts} ${dirSymbol}${reset} `);
+          try {
+            terminal.write(formatData(entry.data));
+          } catch {
+            terminal.write(entry.data);
+          }
+          terminal.writeln("");
+          terminal.scrollToBottom();
         }
-      } catch (error) {
-        console.error("Error handling log update:", error);
+      } catch (err) {
+        console.error("Error handling log update:", err);
       }
     };
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+    ws.onerror = () => {
+      /* handled by onclose */
     };
-
     ws.onclose = () => {
       clearInterval(heartbeatInterval);
     };
@@ -261,69 +192,9 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
       ws.close();
       wsRef.current = null;
     };
-  }, [uuid, startDate, endDate, searchTerm, sortDescending]);
-
-  // Auto-refresh logs every 5 seconds when not in live mode
-  useEffect(() => {
-    if (isLiveMode) {
-      return; // Don't poll when using WebSocket
-    }
-
-    const interval = setInterval(() => {
-      if (startDate && endDate) {
-        fetchLogs(startDate, endDate, searchTerm || undefined, true);
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [startDate, endDate, searchTerm, fetchLogs, isLiveMode]);
-
-  const handleDateChange = (dates: [Date | null, Date | null]) => {
-    const [start, end] = dates;
-    setStartDate(start);
-    setEndDate(end);
-    if (start && end) {
-      fetchLogs(start, end, searchTerm || undefined);
-    }
-  };
-
-  const setToday = () => {
-    const today = new Date();
-    setStartDate(today);
-    setEndDate(today);
-    fetchLogs(today, today, searchTerm || undefined);
-  };
-
-  const setLastWeek = () => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 6);
-    setStartDate(start);
-    setEndDate(end);
-    fetchLogs(start, end, searchTerm || undefined);
-  };
-
-  const formatTimestamp = useCallback((timestamp: string) => {
-    // Show full ISO timestamp: YYYY-MM-DD HH:MM:SS.ms
-    try {
-      const [datePart, timePart] = timestamp.split("T");
-      if (datePart && timePart) {
-        const parts = timePart.split(".");
-        if (parts.length >= 2) {
-          const time = parts[0];
-          const ms = parts[1].substring(0, 3);
-          return `${datePart} ${time}.${ms}`;
-        }
-        return `${datePart} ${parts[0]}`;
-      }
-    } catch {
-      // Fallback to original
-    }
-    return timestamp;
-  }, []);
+  }, [uuid, searchTerm]);
 
   const formatData = useCallback((data: string) => {
-    // Decode escaped characters
     try {
       return JSON.parse(`"${data}"`);
     } catch {
@@ -331,34 +202,10 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     }
   }, []);
 
-  const stripAnsiCodes = (text: string) => {
-    // Remove ANSI escape sequences and control characters
-    return text
-      .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") // ANSI CSI sequences
-      .replace(/\x1b[()][AB012]/g, "") // Character set selection
-      .replace(/\x1b[=>]/g, "") // Keypad modes
-      .replace(/\x1b[78]/g, "") // Save/restore cursor
-      .replace(/\x9b[[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, "") // CSI sequences
-      .replace(/\x00/g, "") // NULL
-      .replace(/\x07/g, "") // BELL
-      .replace(/\x08/g, "") // Backspace
-      .replace(/\x7f/g, "") // DEL
-      .replace(/\r/g, ""); // Carriage return
-  };
-
-  // Initialize terminal when in terminal view mode
+  // Initialize xterm terminal
   useEffect(() => {
-    if (viewMode !== "terminal" || !terminalRef.current) {
-      // Cleanup terminal if switching away from terminal view
-      if (terminalInstance.current) {
-        terminalInstance.current.dispose();
-        terminalInstance.current = null;
-        fitAddon.current = null;
-      }
-      return;
-    }
+    if (!terminalRef.current) return;
 
-    // Create terminal instance
     const terminal = new Terminal({
       cursorBlink: false,
       fontSize: 13,
@@ -380,238 +227,155 @@ export function LogViewer({ uuid, portName, onClose }: LogViewerProps) {
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(terminalRef.current);
-
     terminalInstance.current = terminal;
     fitAddon.current = fit;
 
-    // Fit terminal to container
-    setTimeout(() => {
-      fit.fit();
-    }, 100);
+    setTimeout(() => fit.fit(), 100);
 
-    // Handle window resize
     const handleResize = () => {
-      if (fitAddon.current) {
-        fitAddon.current.fit();
-      }
+      fitAddon.current?.fit();
     };
-
     window.addEventListener("resize", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);
       terminal.dispose();
+      terminalInstance.current = null;
+      fitAddon.current = null;
     };
-  }, [viewMode]);
+  }, []);
 
-  // Render entries in terminal when they change
+  // Re-render entries in terminal whenever entries change
   useEffect(() => {
-    if (viewMode !== "terminal" || !terminalInstance.current || entries.length === 0) {
-      return;
-    }
-
     const terminal = terminalInstance.current;
+    if (!terminal) return;
+
     terminal.clear();
 
-    // In terminal view, always show chronological order (oldest first)
-    // Sort by timestamp ascending, regardless of table view sort order
-    const orderedEntries = [...entries].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-
-    // Render each entry with timestamp and direction indicator
-    for (const entry of orderedEntries) {
-      // Extract just the time portion from the formatted timestamp
-      const fullTimestamp = formatTimestamp(entry.timestamp);
-      const timeOnly = fullTimestamp.split(" ")[1] || fullTimestamp; // Get time part after space
-
-      const directionColor = entry.direction === "in" ? "\x1b[36m" : "\x1b[33m"; // Cyan for in, Yellow for out
-      const directionSymbol = entry.direction === "in" ? "◀" : "▶";
+    for (const entry of entries) {
+      const ts = formatEntryTimestamp(entry.timestamp);
+      const dirColor = entry.direction === "in" ? "\x1b[36m" : "\x1b[33m";
+      const dirSymbol = entry.direction === "in" ? "◀" : "▶";
       const reset = "\x1b[0m";
 
-      // Write timestamp and direction on same line
-      terminal.write(`${directionColor}${timeOnly} ${directionSymbol}${reset} `);
-
-      // Write the actual data with ANSI codes preserved
+      terminal.write(`${dirColor}${ts} ${dirSymbol}${reset} `);
       try {
-        const data = formatData(entry.data);
-        terminal.write(data);
-      } catch (e) {
+        terminal.write(formatData(entry.data));
+      } catch {
         terminal.write(entry.data);
       }
-
-      // Ensure we're on a new line for the next entry
       terminal.writeln("");
     }
 
-    // Scroll to bottom to show latest entries
-    if (terminalInstance.current) {
-      terminalInstance.current.scrollToBottom();
-    }
-  }, [entries, viewMode, formatTimestamp, formatData]);
+    terminal.scrollToBottom();
+  }, [entries, formatData]);
 
-  return (
-    <div className="log-viewer-overlay">
-      <div className="log-viewer-modal">
-        <div className="log-viewer-header">
-          <h2>Logs: {portName}</h2>
-          <button type="button" className="close-button" onClick={onClose}>
-            ✕
+  function applyRange(from: Date, to: Date) {
+    setFromDatetime(from);
+    setToDatetime(to);
+    fetchLogs(from, to, searchTerm || undefined);
+  }
+
+  function setLast12h() {
+    const to = new Date();
+    const from = new Date(to.getTime() - 12 * 60 * 60 * 1000);
+    applyRange(from, to);
+  }
+
+  function setLast24h() {
+    const to = new Date();
+    const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+    applyRange(from, to);
+  }
+
+  function setLast7Days() {
+    const to = new Date();
+    const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
+    applyRange(from, to);
+  }
+
+  function setLastMonth() {
+    const to = new Date();
+    const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+    applyRange(from, to);
+  }
+
+  const modal = (
+    <div className={fullPage ? "log-viewer-fullpage" : "log-viewer-modal"}>
+      <div className="log-viewer-header">
+        <h2>Logs: {portName}</h2>
+        <button type="button" className="close-button" onClick={onClose}>
+          ✕
+        </button>
+      </div>
+
+      <div className="log-viewer-controls">
+        <div className="control-group quick-range-buttons">
+          <button type="button" className="range-btn" onClick={setLast12h} disabled={loading}>
+            Last 12h
+          </button>
+          <button type="button" className="range-btn" onClick={setLast24h} disabled={loading}>
+            Last 24h
+          </button>
+          <button type="button" className="range-btn" onClick={setLast7Days} disabled={loading}>
+            Last 7 days
+          </button>
+          <button type="button" className="range-btn" onClick={setLastMonth} disabled={loading}>
+            Last 30 days
           </button>
         </div>
 
-        <div className="log-viewer-controls">
-          <div className="control-group date-range-group">
-            <span className="label">Date Range:</span>
-            <DatePicker
-              selectsRange
-              startDate={startDate}
-              endDate={endDate}
-              onChange={handleDateChange}
-              dateFormat="yyyy-MM-dd"
-              maxDate={availableDates[0] ? new Date(`${availableDates[0]}T00:00:00`) : new Date()}
-              minDate={
-                availableDates[availableDates.length - 1]
-                  ? new Date(`${availableDates[availableDates.length - 1]}T00:00:00`)
-                  : undefined
-              }
-              disabled={loading || availableDates.length === 0}
-              placeholderText="Select date range"
-              isClearable
-            >
-              <div className="date-picker-quick-buttons">
-                <button type="button" onClick={setToday} disabled={loading} className="range-btn">
-                  Today
-                </button>
-                <button
-                  type="button"
-                  onClick={setLastWeek}
-                  disabled={loading}
-                  className="range-btn"
-                >
-                  Last 7 Days
-                </button>
-              </div>
-            </DatePicker>
-          </div>
-
-          <div className="control-group search-group">
-            <label htmlFor="search-input">Filter:</label>
-            <input
-              ref={searchInputRef}
-              id="search-input"
-              type="text"
-              placeholder="Filter logs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={loading}
-            />
-            {searchTerm && (
-              <button type="button" onClick={() => setSearchTerm("")} disabled={loading}>
-                Clear
-              </button>
-            )}
-          </div>
-
-          <div className="control-group view-mode-group">
-            <span className="label">View:</span>
-            <div className="view-mode-toggle">
-              <button
-                type="button"
-                className={`view-mode-btn ${viewMode === "table" ? "active" : ""}`}
-                onClick={() => setViewMode("table")}
-                disabled={loading}
-                title="Table view with timestamps"
-              >
-                📋 Table
-              </button>
-              <button
-                type="button"
-                className={`view-mode-btn ${viewMode === "terminal" ? "active" : ""}`}
-                onClick={() => setViewMode("terminal")}
-                disabled={loading}
-                title="Terminal view with ANSI colors"
-              >
-                💻 Terminal
-              </button>
-            </div>
-          </div>
+        <div className="control-group search-group">
+          <label htmlFor="search-input">Filter:</label>
+          <input
+            ref={searchInputRef}
+            id="search-input"
+            type="text"
+            placeholder="Filter logs..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={loading}
+          />
+          {searchTerm && (
+            <button type="button" onClick={() => setSearchTerm("")} disabled={loading}>
+              Clear
+            </button>
+          )}
         </div>
+      </div>
 
-        {loading && <div className="log-loading">Loading logs...</div>}
+      {truncated && !loading && (
+        <div className="log-truncated-notice">
+          Showing last {MAX_ENTRIES} entries — narrow the time range to see earlier messages
+        </div>
+      )}
 
-        {error && <div className="log-error">{error}</div>}
+      {loading && <div className="log-loading">Loading logs...</div>}
+      {error && <div className="log-error">{error}</div>}
+      {!loading && !error && entries.length === 0 && (
+        <div className="log-empty">
+          {searchTerm ? "No logs match your filter" : "No logs in this time range"}
+        </div>
+      )}
 
-        {!loading && !error && entries.length === 0 && (
-          <div className="log-empty">
-            {searchTerm ? "No logs match your search criteria" : "No logs available for this date"}
-          </div>
-        )}
+      <div className="log-viewer-terminal-container">
+        <div ref={terminalRef} className="log-viewer-terminal" />
+      </div>
 
-        {!loading && !error && entries.length > 0 && viewMode === "table" && (
-          <div className="log-viewer-content" ref={logContainerRef}>
-            <table className="log-table">
-              <thead>
-                <tr>
-                  <th className="log-direction">Dir</th>
-                  <th className="log-time">
-                    <button type="button" className="sortable" onClick={toggleSortOrder}>
-                      Time {sortDescending ? "↑" : "↓"}
-                    </button>
-                  </th>
-                  <th className="log-data">Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry, index) => (
-                  <tr
-                    key={`${entry.timestamp}-${index}`}
-                    className={`log-entry log-${entry.direction}`}
-                  >
-                    <td className="log-direction">
-                      <span className={`direction-badge direction-${entry.direction}`}>
-                        {entry.direction === "in" ? "<" : ">"}
-                      </span>
-                    </td>
-                    <td className="log-time">{formatTimestamp(entry.timestamp)}</td>
-                    <td className="log-data">
-                      <pre>{stripAnsiCodes(formatData(entry.data))}</pre>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {hasMore && (
-              <div className="log-loading-more">
-                {loading ? "Loading more..." : "Scroll for more"}
-              </div>
-            )}
-          </div>
-        )}
-
-        {!loading && !error && entries.length > 0 && viewMode === "terminal" && (
-          <div className="log-viewer-terminal-container">
-            <div ref={terminalRef} className="log-viewer-terminal" />
-            {hasMore && (
-              <div className="log-loading-more">
-                {loading ? "Loading more..." : "Scroll for more"}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="log-viewer-footer">
-          <div className="log-stats">
-            {!loading && !error && (
-              <>
-                <span>
-                  Showing {entries.length} of {total} entries
-                </span>
-                {isLiveMode && <span className="live-indicator">🔴 LIVE</span>}
-                {searchTerm && <span className="search-indicator">Filtered results</span>}
-              </>
-            )}
-          </div>
+      <div className="log-viewer-footer">
+        <div className="log-stats">
+          {!loading && !error && (
+            <>
+              <span>{entries.length} entries</span>
+              {isLiveMode && <span className="live-indicator">🔴 LIVE</span>}
+              {searchTerm && <span className="search-indicator">Filtered</span>}
+            </>
+          )}
         </div>
       </div>
     </div>
   );
+
+  if (fullPage) return modal;
+  return <div className="log-viewer-overlay">{modal}</div>;
 }

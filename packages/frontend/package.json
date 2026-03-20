@@ -14,12 +14,10 @@
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "react": "^18.3.1",
-    "react-datepicker": "^9.1.0",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
-    "@types/react-datepicker": "^7.0.0",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "vite": "^6.0.7"
