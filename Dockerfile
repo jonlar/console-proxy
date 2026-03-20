@@ -1,15 +1,9 @@
-# Use Alpine-based Node.js image
-FROM node:25-alpine
+# Use official Bun Alpine image (no Node.js, smaller attack surface)
+FROM oven/bun:1-alpine
 
 # Build arguments for version information
 ARG GIT_TAG
 ARG GIT_COMMIT
-
-# Install Bun
-RUN apk add --no-cache curl unzip bash && \
-    curl -fsSL https://bun.sh/install | bash && \
-    ln -s /root/.bun/bin/bun /usr/local/bin/bun && \
-    apk del curl unzip
 
 # Set working directory
 WORKDIR /app
