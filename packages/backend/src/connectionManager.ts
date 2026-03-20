@@ -44,13 +44,17 @@ export class TelnetConnectionManager extends EventEmitter {
     this.ports.set(id, port);
 
     // Initialize connection info
+    const previousStatus = this.connectionInfos.get(id)?.status;
     const info: ConnectionInfo = {
       portId: id,
       status: "connecting",
       retryCount: this.connectionInfos.get(id)?.retryCount || 0, // Preserve retry count
     };
     this.connectionInfos.set(id, info);
-    this.emit("statusChanged", id, info);
+    // Don't broadcast "connecting" during retries — it causes unnecessary UI re-renders
+    if (previousStatus !== "error") {
+      this.emit("statusChanged", id, info);
+    }
 
     try {
       await this.establishConnection(port);

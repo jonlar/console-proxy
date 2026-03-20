@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { LogViewer } from "./LogViewer";
 import { client } from "./api";
@@ -74,6 +74,7 @@ type Port = {
 
 function App() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPort, setEditingPort] = useState<Port | null>(null);
   // @ts-ignore - portType is used in form submission handlers
@@ -144,6 +145,7 @@ function App() {
   const deleteMutation = client.deletePort.useMutation();
 
   // WebSocket connection
+  // biome-ignore lint/correctness/useExhaustiveDependencies: queryClient is stable and wsUnmountedRef/wsReconnectTimerRef are refs
   useEffect(() => {
     wsUnmountedRef.current = false;
 
@@ -165,7 +167,28 @@ function App() {
           if (message.type === "ports_updated") {
             setRefreshKey((k) => k + 1);
           } else if (message.type === "connection_status_changed") {
-            setRefreshKey((k) => k + 1);
+            const { portId, connectionInfo } = message.data;
+            queryClient.setQueriesData(
+              { queryKey: ["ports"] },
+              (old: { body: { ports: Port[] } } | undefined) => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  body: {
+                    ...old.body,
+                    ports: old.body.ports.map((p) =>
+                      p.id === portId
+                        ? {
+                            ...p,
+                            connectionStatus: connectionInfo.status,
+                            lastError: connectionInfo.lastError,
+                          }
+                        : p,
+                    ),
+                  },
+                };
+              },
+            );
           } else if (message.type === "terminal_status_changed") {
             setTerminalSessions((prev) => {
               const newMap = new Map(prev);
