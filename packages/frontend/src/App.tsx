@@ -854,9 +854,6 @@ function App() {
                       <div className="card-actions">
                         <div className="port-connection-group">
                           <span className={`port-type ${port.type}`}>{port.type}</span>
-                          <span className="port-connection">
-                            {port.host}:{port.port}
-                          </span>
                         </div>
                         <div className="action-buttons">
                           <div className="left-actions">
