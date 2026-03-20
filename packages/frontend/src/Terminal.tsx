@@ -10,6 +10,7 @@ interface TerminalComponentProps {
   ws: WebSocket;
   userName: string;
   onClose: () => void;
+  fullPage?: boolean;
 }
 
 export function TerminalComponent({
@@ -19,6 +20,7 @@ export function TerminalComponent({
   ws,
   userName,
   onClose,
+  fullPage,
 }: TerminalComponentProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
@@ -157,6 +159,20 @@ export function TerminalComponent({
       terminal.dispose();
     };
   }, [portId, portName, takeover]);
+
+  if (fullPage) {
+    return (
+      <div className="terminal-fullpage">
+        <div className="terminal-header">
+          <span className="terminal-title">💻 {portName}</span>
+          <button type="button" className="terminal-close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="terminal-content" ref={terminalRef} />
+      </div>
+    );
+  }
 
   return (
     <div className="terminal-overlay">

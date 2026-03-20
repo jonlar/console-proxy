@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { LogViewer } from "./LogViewer";
-import { TerminalComponent } from "./Terminal";
 import { client } from "./api";
 import "./App.css";
 
@@ -98,7 +97,6 @@ function App() {
     type: "success" | "error";
     message: string;
   } | null>(null);
-  const [activeTerminal, setActiveTerminal] = useState<string | null>(null);
   const [logViewerPort, setLogViewerPort] = useState<{
     uuid: string;
     name: string;
@@ -213,7 +211,10 @@ function App() {
       setShowIdentityModal(true);
       return;
     }
-    setActiveTerminal(port.id);
+    window.open(
+      `/terminal?portId=${encodeURIComponent(port.id)}&portName=${encodeURIComponent(port.name)}`,
+      "_blank",
+    );
   }
 
   function handleTakeoverTerminal(port: Port) {
@@ -226,7 +227,10 @@ function App() {
 
   function confirmTakeover() {
     if (takeoverConfirm) {
-      setActiveTerminal(`${takeoverConfirm.port.id}|takeover`);
+      window.open(
+        `/terminal?portId=${encodeURIComponent(takeoverConfirm.port.id)}&portName=${encodeURIComponent(takeoverConfirm.port.name)}&takeover=true`,
+        "_blank",
+      );
       setTakeoverConfirm(null);
     }
   }
@@ -395,23 +399,6 @@ function App() {
 
   return (
     <div className="app">
-      {activeTerminal && wsRef.current && userName && (
-        <TerminalComponent
-          portId={activeTerminal.includes("|") ? activeTerminal.split("|")[0] : activeTerminal}
-          portName={
-            data?.body?.ports?.find(
-              (p: Port) =>
-                p.id ===
-                (activeTerminal.includes("|") ? activeTerminal.split("|")[0] : activeTerminal),
-            )?.name || "Unknown"
-          }
-          takeover={activeTerminal.includes("|takeover")}
-          ws={wsRef.current}
-          userName={userName}
-          onClose={() => setActiveTerminal(null)}
-        />
-      )}
-
       <div className="header">
         <div className="title-section">
           <div className="title-row">
